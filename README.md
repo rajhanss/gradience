@@ -1,2 +1,2 @@
 # gradience
-Industrial Cooling Anomaly & Thermal Intelligence System.
+Industrial Cooling System Anomaly Detector  & Thermal Intelligence.
