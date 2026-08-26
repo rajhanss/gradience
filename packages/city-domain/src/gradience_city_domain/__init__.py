@@ -6,6 +6,7 @@ from .mobility import (
     RouteOption,
     RouteOptimizationResult,
     RouteRequest,
+    TimeWindowOption,
 )
 from .models import (
     AreaOfInterest,
@@ -52,6 +53,7 @@ __all__ = [
     "ScenarioSnapshot",
     "SimulationComparison",
     "ThermalState",
+    "TimeWindowOption",
     "WhatIfIntent",
     "WhatIfQuery",
     "WhatIfResult",

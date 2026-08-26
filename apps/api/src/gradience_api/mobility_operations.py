@@ -1,5 +1,6 @@
 """Climate-aware route optimization using deterministic multi-objective scoring."""
 
+from datetime import timedelta
 from math import asin, cos, radians, sin, sqrt
 from uuid import uuid4
 
@@ -11,6 +12,7 @@ from gradience_city_domain import (
     RouteOption,
     RouteOptimizationResult,
     RouteRequest,
+    TimeWindowOption,
 )
 
 METHOD = "gradience-mobility-v1: haversine routing + weighted multi-objective scoring"
@@ -90,10 +92,52 @@ class MobilityOperationsService:
             )
 
         recommended = min(options, key=lambda option: option.composite_score.value or float("inf"))
+        time_windows = self._time_windows(request)
+        recommended_window = min(time_windows, key=lambda option: option.thermal_exposure_score.value or float("inf"))
         return RouteOptimizationResult(
             request_id=str(uuid4()),
             method=METHOD,
             source=SOURCE,
             recommended_route_id=recommended.route_id,
             options=options,
+            time_windows=time_windows,
+            recommended_depart_at=recommended_window.depart_at,
+            operational_guidance=self._guidance(request),
         )
+
+    def _time_windows(self, request: RouteRequest) -> list[TimeWindowOption]:
+        windows: list[TimeWindowOption] = []
+        for offset in (-2, -1, 0, 1):
+            depart_at = request.depart_at + timedelta(hours=offset)
+            exposure = 1.0 + depart_at.hour / 24.0
+            verdict = "lower modeled exposure" if exposure <= 1.3 else "higher modeled exposure"
+            windows.append(
+                TimeWindowOption(
+                    depart_at=depart_at,
+                    thermal_exposure_score=_modeled_metric(exposure, unit="index"),
+                    verdict=MeasuredMetric[str](
+                        value=verdict,
+                        provenance=DataProvenance.MODELED,
+                        source=SOURCE,
+                        method=METHOD,
+                        uncertainty=0.25,
+                    ),
+                )
+            )
+        return windows
+
+    def _guidance(self, request: RouteRequest) -> list[str]:
+        if request.mode is MobilityMode.OUTDOOR_EVENT:
+            return [
+                "Schedule around the lowest modeled exposure window.",
+                "Validate heat, air quality, hydration, and medical operations with real event-day data.",
+            ]
+        if request.mode is MobilityMode.DELIVERY:
+            return [
+                "Use the lowest modeled exposure window to reduce external thermal load.",
+                "Vehicle cargo temperature is not calculated without a validated vehicle thermal model or sensor feed.",
+            ]
+        return [
+            "Choose the recommended route and departure window according to your selected priorities.",
+            "Route geometry and heat exposure are modeled until live routing and environmental layers are connected.",
+        ]

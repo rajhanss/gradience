@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from .models import GeoPoint, MeasuredMetric
 
@@ -37,6 +37,17 @@ class RouteRequest(BaseModel):
     destination: GeoPoint
     depart_at: datetime
     priorities: OptimizationPriority = Field(default_factory=OptimizationPriority)
+    event_name: str | None = Field(default=None, max_length=120)
+    participants: int | None = Field(default=None, gt=0, le=10_000_000)
+    cargo_max_temperature_c: float | None = Field(default=None, ge=-100, le=100)
+
+    @model_validator(mode="after")
+    def validate_operation_details(self) -> "RouteRequest":
+        if self.mode is MobilityMode.OUTDOOR_EVENT and self.participants is None:
+            raise ValueError("outdoor_event mode requires participants")
+        if self.mode is MobilityMode.DELIVERY and self.cargo_max_temperature_c is None:
+            raise ValueError("delivery mode requires cargo_max_temperature_c")
+        return self
 
 
 class RouteOption(BaseModel):
@@ -49,9 +60,18 @@ class RouteOption(BaseModel):
     waypoints: list[GeoPoint]
 
 
+class TimeWindowOption(BaseModel):
+    depart_at: datetime
+    thermal_exposure_score: MeasuredMetric[float]
+    verdict: MeasuredMetric[str]
+
+
 class RouteOptimizationResult(BaseModel):
     request_id: str
     method: str
     source: str
     recommended_route_id: str
     options: list[RouteOption]
+    time_windows: list[TimeWindowOption] = Field(default_factory=list)
+    recommended_depart_at: datetime | None = None
+    operational_guidance: list[str] = Field(default_factory=list)

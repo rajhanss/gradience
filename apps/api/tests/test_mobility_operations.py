@@ -15,3 +15,5 @@ def test_mobility_prefers_low_exposure_when_weighted() -> None:
     )
     result = service.optimize(request)
     assert result.recommended_route_id == "shaded-corridor"
+    assert len(result.time_windows) == 4
+    assert result.recommended_depart_at is not None
