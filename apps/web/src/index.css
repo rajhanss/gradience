@@ -35,6 +35,126 @@ button {
   padding: 1.5rem;
 }
 
+.landing-page {
+  min-height: 100vh;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: clamp(1.25rem, 4vw, 4rem);
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+}
+
+.landing-header,
+.landing-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.landing-header p,
+.landing-footer {
+  margin: 0;
+}
+
+.brand-mark,
+.app-brand {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+}
+
+.brand-mark > span:first-child {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgba(226, 232, 240, 0.7);
+  color: #f8fafc;
+}
+
+.landing-intro {
+  max-width: 720px;
+}
+
+.landing-intro h1 {
+  margin: 0.4rem 0 1rem;
+  font-size: clamp(3rem, 8vw, 6.5rem);
+  line-height: 0.9;
+  letter-spacing: -0.065em;
+  font-weight: 500;
+  color: #f8fafc;
+}
+
+.landing-intro > p:last-child {
+  max-width: 550px;
+  margin: 0;
+  color: #94a3b8;
+  font-size: clamp(1rem, 1.6vw, 1.2rem);
+}
+
+.product-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-height: min(58vh, 620px);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.product-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 410px;
+  padding: clamp(1.25rem, 3vw, 2.5rem);
+  border: 0;
+  border-right: 1px solid rgba(148, 163, 184, 0.18);
+  color: #e2e8f0;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  background:
+    linear-gradient(155deg, rgba(15, 23, 42, 0.35) 0%, rgba(2, 6, 23, 0.96) 75%),
+    #0f172a;
+  transition: transform 180ms ease, background 180ms ease;
+}
+
+.product-card:last-child { border-right: 0; }
+.product-card:hover,
+.product-card:focus-visible { transform: translateY(-8px); outline: 1px solid #e2e8f0; outline-offset: -1px; }
+.product-card--city:hover { background: linear-gradient(155deg, rgba(14, 116, 144, 0.52), rgba(2, 6, 23, 0.96) 70%); }
+.product-card--development:hover { background: linear-gradient(155deg, rgba(180, 83, 9, 0.48), rgba(2, 6, 23, 0.96) 70%); }
+.product-card--mobility:hover { background: linear-gradient(155deg, rgba(79, 70, 229, 0.48), rgba(2, 6, 23, 0.96) 70%); }
+
+.product-card__index,
+.product-card__eyebrow,
+.product-card__action {
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.product-card__index { color: #64748b; }
+.product-card__eyebrow { margin-top: auto; color: #7dd3fc; }
+.product-card__title { margin-top: 0.5rem; font-size: clamp(1.75rem, 3vw, 3.25rem); line-height: 0.95; font-weight: 500; letter-spacing: -0.045em; }
+.product-card__prompt { margin-top: 1rem; font-size: 1rem; color: #e2e8f0; }
+.product-card__description { margin-top: 0.6rem; max-width: 25ch; color: #94a3b8; font-size: 0.9rem; }
+.product-card__action { margin-top: 2rem; color: #f8fafc; }
+
+.app-brand {
+  font-size: clamp(2rem, 4vw, 3rem);
+}
+
 .app-header,
 .panel-heading,
 .status-panel,
@@ -435,4 +555,16 @@ button {
   .coordinate-readout {
     align-items: flex-start;
   }
+
+  .product-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .product-card {
+    min-height: 280px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  }
+
+  .product-card:last-child { border-bottom: 0; }
 }
