@@ -1,0 +1,8 @@
+Metadata-Version: 2.4
+Name: gradience-city-domain
+Version: 0.1.0
+Summary: Provider-neutral City Context domain contracts for GRADIENCE.
+Requires-Python: >=3.11
+Requires-Dist: pydantic<3,>=2.7
+Provides-Extra: dev
+Requires-Dist: pytest<9,>=8; extra == "dev"
