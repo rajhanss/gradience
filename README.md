@@ -98,13 +98,15 @@ Three interfaces share one backend core:
 
 ## Current status
 
+- Reference-inspired dark homepage with three dedicated product interfaces
 - Shared City Context contracts with provenance enforcement
 - FortyGuard provider adapter (async, retries, no secret logging)
 - Live heatmap submit/poll workflow with stats enrichment
-- Development simulator with current / proposed / optimized comparison
-- Mobility optimizer with weighted multi-objective scoring
-- Deterministic What-If intent layer (LLM-ready interface)
-- React dashboard with all four interface tabs
+- City Intelligence workspace with thermal, hotspot, trends, exposure, and alerts states
+- Development simulator with current / proposed / optimized comparison and explicit mitigation strategies
+- Mobility workspace for personal trips, outdoor events, and temperature-sensitive deliveries
+- Deterministic What-If decision layer (LLM-ready interface)
+- React map-centric dashboard with dedicated City, Development, and Mobility pages
 - Docker Compose for local production-like runs
 
 ## Remaining / future work
