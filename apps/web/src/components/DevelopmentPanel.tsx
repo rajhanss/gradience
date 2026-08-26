@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { DevelopmentProposal, SimulationComparison } from "../api/client";
+import type { DevelopmentProposal, MitigationStrategy, SimulationComparison } from "../api/client";
 import { simulateDevelopment } from "../api/client";
 import { MetricCard } from "./MetricCard";
 
@@ -12,13 +12,32 @@ const DEFAULT_PROPOSAL: DevelopmentProposal = {
   development_type: "mixed_use",
   footprint_hectares: 5,
   land_cover_changes: { vegetation_change_pct: -5, built_up_change_pct: 8 },
+  mitigation_strategies: ["green_corridor", "tree_canopy", "cool_surfaces"],
 };
+
+const MITIGATION_OPTIONS: Array<{ value: MitigationStrategy; label: string; detail: string }> = [
+  { value: "green_corridor", label: "Green corridor", detail: "Modeled cooling: 0.35°C" },
+  { value: "tree_canopy", label: "Tree canopy", detail: "Modeled cooling: 0.25°C" },
+  { value: "shade_structures", label: "Shade structures", detail: "Modeled cooling: 0.12°C" },
+  { value: "cool_surfaces", label: "Cool surfaces", detail: "Modeled cooling: 0.18°C" },
+  { value: "blue_infrastructure", label: "Blue infrastructure", detail: "Modeled cooling: 0.20°C" },
+];
 
 export function DevelopmentPanel({ latitude, longitude }: DevelopmentPanelProps) {
   const [proposal, setProposal] = useState<DevelopmentProposal>(DEFAULT_PROPOSAL);
   const [comparison, setComparison] = useState<SimulationComparison | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const toggleMitigation = (strategy: MitigationStrategy) => {
+    const selected = proposal.mitigation_strategies.includes(strategy);
+    setProposal({
+      ...proposal,
+      mitigation_strategies: selected
+        ? proposal.mitigation_strategies.filter((item) => item !== strategy)
+        : [...proposal.mitigation_strategies, strategy],
+    });
+  };
 
   const runSimulation = async () => {
     setLoading(true);
@@ -44,6 +63,26 @@ export function DevelopmentPanel({ latitude, longitude }: DevelopmentPanelProps)
           {loading ? "Simulating…" : "Run simulation"}
         </button>
       </div>
+
+      <section className="mitigation-picker" aria-labelledby="mitigation-heading">
+        <div>
+          <p className="eyebrow">Mitigate</p>
+          <h3 id="mitigation-heading">Optimize the proposed design</h3>
+          <p>Select interventions. Their documented baseline cooling coefficients are applied only to the optimized scenario.</p>
+        </div>
+        <div className="mitigation-options">
+          {MITIGATION_OPTIONS.map((option) => (
+            <label key={option.value} className="mitigation-option">
+              <input
+                type="checkbox"
+                checked={proposal.mitigation_strategies.includes(option.value)}
+                onChange={() => toggleMitigation(option.value)}
+              />
+              <span><strong>{option.label}</strong><small>{option.detail}</small></span>
+            </label>
+          ))}
+        </div>
+      </section>
 
       <div className="form-grid">
         <label>
@@ -117,8 +156,21 @@ export function DevelopmentPanel({ latitude, longitude }: DevelopmentPanelProps)
               </article>
             );
           })}
+          <article className="comparison-card simulation-explanation">
+            <h3>Decision explanation</h3>
+            <p>Method: {comparison.method}</p>
+            <p>Applied mitigation: {comparison.recommendations.length ? comparison.recommendations.join(" · ") : "None selected — optimized result matches proposed scenario."}</p>
+            <p className="metric-card__meta">This is a transparent baseline model, not an observed or ML prediction.</p>
+          </article>
         </div>
       ) : null}
+
+      <section className="monitoring-card">
+        <p className="eyebrow">Monitor</p>
+        <h3>Predicted vs observed impact</h3>
+        <span className="provenance-badge provenance-unavailable">Unavailable</span>
+        <p>Observed post-development thermal data has not been linked to a completed project. GRADIENCE will show prediction error only when matched observations exist.</p>
+      </section>
     </section>
   );
 }

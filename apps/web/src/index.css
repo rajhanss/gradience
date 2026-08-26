@@ -300,6 +300,42 @@ button {
   box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.15);
 }
 
+.mitigation-picker,
+.monitoring-card {
+  margin: 1.25rem 0;
+  padding: 1.1rem;
+  border-radius: 1rem;
+  background: rgba(2, 6, 23, 0.45);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.mitigation-picker h3,
+.monitoring-card h3 { margin: 0.2rem 0 0.4rem; }
+.mitigation-picker p,
+.monitoring-card p { color: #94a3b8; }
+
+.mitigation-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.mitigation-option {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  padding: 0.8rem;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 0.8rem;
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.mitigation-option input { accent-color: #38bdf8; margin-top: 0.2rem; }
+.mitigation-option span { display: grid; gap: 0.15rem; }
+.mitigation-option small { color: #94a3b8; }
+.simulation-explanation { grid-column: 1 / -1; }
+
 .map-actions {
   display: flex;
   gap: 0.75rem;

@@ -85,7 +85,10 @@ export interface DevelopmentProposal {
     vegetation_change_pct: number;
     built_up_change_pct: number;
   };
+  mitigation_strategies: MitigationStrategy[];
 }
+
+export type MitigationStrategy = "green_corridor" | "tree_canopy" | "shade_structures" | "cool_surfaces" | "blue_infrastructure";
 
 export interface SimulationComparison {
   scenario_id: string;
@@ -94,6 +97,8 @@ export interface SimulationComparison {
   current: ScenarioSnapshot;
   proposed: ScenarioSnapshot;
   optimized: ScenarioSnapshot;
+  applied_mitigations: MitigationStrategy[];
+  recommendations: string[];
 }
 
 export interface ScenarioSnapshot {
