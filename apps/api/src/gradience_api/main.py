@@ -2,22 +2,32 @@ import os
 from datetime import UTC, datetime, timedelta
 
 from fastapi import FastAPI, HTTPException, Query, status
+from fastapi.middleware.cors import CORSMiddleware
 
 from gradience_city_domain import (
     AreaOfInterest,
     CityContext,
     DataProvenance,
+    DevelopmentProposal,
     EnvironmentalState,
     ExposureState,
     GeoPoint,
     LandCoverState,
     MeasuredMetric,
     ObservationWindow,
+    RouteRequest,
     ThermalState,
+    WhatIfQuery,
 )
 from gradience_thermal_providers import FortyGuardError, FortyGuardProvider, FortyGuardSettings, HeatmapRequest, ThermalDataProvider
 
 from .city_intelligence import CityIntelligenceService, HeatmapStatus
+from .development_intelligence import DevelopmentIntelligenceService
+from .heatmap_mapper import apply_heatmap_stats
+from .hotspot_analysis import HotspotAnalysis, HotspotAnalysisService
+from .mobility_operations import MobilityOperationsService
+from .system_status import SystemStatus
+from .what_if_engine import WhatIfEngine
 
 
 def unavailable_metric() -> MeasuredMetric[float]:
@@ -33,11 +43,30 @@ def provider_from_environment() -> ThermalDataProvider | None:
 
 def create_app(provider: ThermalDataProvider | None = None, *, use_environment_provider: bool = False) -> FastAPI:
     active_provider = provider or (provider_from_environment() if use_environment_provider else None)
+    development_service = DevelopmentIntelligenceService()
+    mobility_service = MobilityOperationsService()
+    what_if_engine = WhatIfEngine()
+    hotspot_service = HotspotAnalysisService()
+
     app = FastAPI(title="GRADIENCE API", version="0.1.0")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[
+            "http://127.0.0.1:5173",
+            "http://localhost:5173",
+        ],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     @app.get("/health")
     async def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get("/v1/system/status", response_model=SystemStatus)
+    async def system_status() -> SystemStatus:
+        return SystemStatus.current(thermal_provider_configured=active_provider is not None)
 
     @app.get("/v1/city-context", response_model=CityContext)
     async def city_context(
@@ -73,6 +102,54 @@ def create_app(provider: ThermalDataProvider | None = None, *, use_environment_p
     @app.get("/v1/city-intelligence/heatmaps/{activity_id}", response_model=HeatmapStatus)
     async def heatmap_status(activity_id: str) -> HeatmapStatus:
         return await city_service().status(activity_id)
+
+    @app.get("/v1/city-intelligence/context-from-heatmap/{activity_id}", response_model=CityContext)
+    async def context_from_heatmap(
+        activity_id: str,
+        latitude: float = Query(ge=-90, le=90),
+        longitude: float = Query(ge=-180, le=180),
+    ) -> CityContext:
+        heatmap = await city_service().status(activity_id)
+        if heatmap.status != "completed" or heatmap.result is None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Heatmap is still processing")
+        base = await city_context(latitude=latitude, longitude=longitude)
+        return apply_heatmap_stats(base, heatmap.result.stats_data)
+
+    @app.get("/v1/city-intelligence/hotspots/{activity_id}", response_model=HotspotAnalysis)
+    async def hotspot_analysis(
+        activity_id: str,
+        latitude: float = Query(ge=-90, le=90),
+        longitude: float = Query(ge=-180, le=180),
+    ) -> HotspotAnalysis:
+        heatmap = await city_service().status(activity_id)
+        if heatmap.status != "completed" or heatmap.result is None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Heatmap is still processing")
+        return hotspot_service.analyze(
+            activity_id=activity_id,
+            latitude=latitude,
+            longitude=longitude,
+            map_data=heatmap.result.map_data,
+            stats_data=heatmap.result.stats_data,
+        )
+
+    @app.post("/v1/development-intelligence/simulate")
+    async def simulate_development(
+        proposal: DevelopmentProposal,
+        latitude: float = Query(ge=-90, le=90),
+        longitude: float = Query(ge=-180, le=180),
+    ) -> object:
+        return development_service.simulate(latitude, longitude, proposal)
+
+    @app.post("/v1/mobility/optimize")
+    async def optimize_route(request: RouteRequest) -> object:
+        return mobility_service.optimize(request)
+
+    @app.post("/v1/what-if")
+    async def what_if(query: WhatIfQuery) -> object:
+        try:
+            return what_if_engine.resolve(query)
+        except ValueError as error:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)) from error
 
     return app
 
