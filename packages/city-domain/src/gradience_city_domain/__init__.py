@@ -1,5 +1,12 @@
 """Provider-neutral domain contracts for GRADIENCE."""
 
+from .mobility import (
+    MobilityMode,
+    OptimizationPriority,
+    RouteOption,
+    RouteOptimizationResult,
+    RouteRequest,
+)
 from .models import (
     AreaOfInterest,
     CityContext,
@@ -13,17 +20,37 @@ from .models import (
     ObservationWindow,
     ThermalState,
 )
+from .simulation import (
+    DevelopmentProposal,
+    DevelopmentType,
+    LandCoverChange,
+    ScenarioSnapshot,
+    SimulationComparison,
+)
+from .what_if import WhatIfIntent, WhatIfQuery, WhatIfResult
 
 __all__ = [
     "AreaOfInterest",
     "CityContext",
     "DataProvenance",
+    "DevelopmentProposal",
+    "DevelopmentType",
     "EnvironmentalState",
     "ExposureState",
     "GeoPoint",
     "InfrastructureState",
-    "LandCoverState",
+    "LandCoverChange",
     "MeasuredMetric",
+    "MobilityMode",
     "ObservationWindow",
+    "OptimizationPriority",
+    "RouteOption",
+    "RouteOptimizationResult",
+    "RouteRequest",
+    "ScenarioSnapshot",
+    "SimulationComparison",
     "ThermalState",
+    "WhatIfIntent",
+    "WhatIfQuery",
+    "WhatIfResult",
 ]
