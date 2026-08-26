@@ -22,6 +22,7 @@ from .models import (
 )
 from .simulation import (
     DevelopmentProposal,
+    MitigationStrategy,
     DevelopmentType,
     LandCoverChange,
     ScenarioSnapshot,
@@ -34,6 +35,7 @@ __all__ = [
     "CityContext",
     "DataProvenance",
     "DevelopmentProposal",
+    "MitigationStrategy",
     "DevelopmentType",
     "EnvironmentalState",
     "ExposureState",

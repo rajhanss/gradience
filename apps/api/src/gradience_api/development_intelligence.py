@@ -11,6 +11,7 @@ from gradience_city_domain import (
     DevelopmentType,
     GeoPoint,
     LandCoverState,
+    MitigationStrategy,
     MeasuredMetric,
     ObservationWindow,
     ScenarioSnapshot,
@@ -32,6 +33,22 @@ TYPE_MULTIPLIERS: dict[DevelopmentType, float] = {
     DevelopmentType.GREEN_INFRASTRUCTURE: 0.6,
 }
 
+MITIGATION_COOLING: dict[MitigationStrategy, float] = {
+    MitigationStrategy.GREEN_CORRIDOR: 0.35,
+    MitigationStrategy.TREE_CANOPY: 0.25,
+    MitigationStrategy.SHADE_STRUCTURES: 0.12,
+    MitigationStrategy.COOL_SURFACES: 0.18,
+    MitigationStrategy.BLUE_INFRASTRUCTURE: 0.2,
+}
+
+MITIGATION_LABELS: dict[MitigationStrategy, str] = {
+    MitigationStrategy.GREEN_CORRIDOR: "Add a connected green corridor",
+    MitigationStrategy.TREE_CANOPY: "Increase tree-canopy coverage",
+    MitigationStrategy.SHADE_STRUCTURES: "Add shade structures at high-exposure areas",
+    MitigationStrategy.COOL_SURFACES: "Use cool, reflective surface materials",
+    MitigationStrategy.BLUE_INFRASTRUCTURE: "Add blue infrastructure where hydrologically suitable",
+}
+
 
 def unavailable_metric() -> MeasuredMetric[float]:
     return MeasuredMetric[float](provenance=DataProvenance.UNAVAILABLE)
@@ -48,14 +65,10 @@ def _base_context(latitude: float, longitude: float) -> CityContext:
     )
 
 
-def _delta_temperature(proposal: DevelopmentProposal, *, optimized: bool = False) -> float:
+def _delta_temperature(proposal: DevelopmentProposal) -> float:
     changes = proposal.land_cover_changes
     veg_delta = changes.vegetation_change_pct
     built_delta = changes.built_up_change_pct
-    if optimized:
-        veg_delta = max(veg_delta, 0) + min(5.0, proposal.footprint_hectares * 0.5)
-        built_delta = min(built_delta, 0)
-
     type_factor = TYPE_MULTIPLIERS[proposal.development_type]
     footprint_factor = min(2.0, 1.0 + proposal.footprint_hectares / 50.0)
     delta = (
@@ -63,6 +76,11 @@ def _delta_temperature(proposal: DevelopmentProposal, *, optimized: bool = False
         + (BUILTUP_HEATING_PER_10PCT * built_delta / 10.0)
     ) * type_factor * footprint_factor
     return round(delta, 2)
+
+
+def _optimized_delta(proposed_delta: float, strategies: list[MitigationStrategy]) -> float:
+    cooling = sum(MITIGATION_COOLING[strategy] for strategy in strategies)
+    return round(proposed_delta - cooling, 2)
 
 
 def _modeled_delta_metric(delta: float) -> MeasuredMetric[float]:
@@ -86,7 +104,7 @@ class DevelopmentIntelligenceService:
             context=_base_context(latitude, longitude),
             delta_surface_temperature=_modeled_delta_metric(proposed_delta),
         )
-        optimized_delta = _delta_temperature(proposal, optimized=True)
+        optimized_delta = _optimized_delta(proposed_delta, proposal.mitigation_strategies)
         optimized = ScenarioSnapshot(
             label="optimized",
             context=_base_context(latitude, longitude),
@@ -99,4 +117,6 @@ class DevelopmentIntelligenceService:
             current=current,
             proposed=proposed,
             optimized=optimized,
+            applied_mitigations=proposal.mitigation_strategies,
+            recommendations=[MITIGATION_LABELS[strategy] for strategy in proposal.mitigation_strategies],
         )
