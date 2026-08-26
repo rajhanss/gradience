@@ -113,6 +113,9 @@ export interface RouteRequest {
   destination: { latitude: number; longitude: number };
   depart_at: string;
   priorities: { distance: number; travel_time: number; thermal_exposure: number };
+  event_name?: string;
+  participants?: number;
+  cargo_max_temperature_c?: number;
 }
 
 export interface RouteOptimizationResult {
@@ -121,6 +124,15 @@ export interface RouteOptimizationResult {
   source: string;
   recommended_route_id: string;
   options: RouteOption[];
+  time_windows: TimeWindowOption[];
+  recommended_depart_at: string | null;
+  operational_guidance: string[];
+}
+
+export interface TimeWindowOption {
+  depart_at: string;
+  thermal_exposure_score: MeasuredMetric<number>;
+  verdict: MeasuredMetric<string>;
 }
 
 export interface RouteOption {
