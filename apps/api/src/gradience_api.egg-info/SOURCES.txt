@@ -1,0 +1,10 @@
+README.md
+pyproject.toml
+src/gradience_api/__init__.py
+src/gradience_api/main.py
+src/gradience_api.egg-info/PKG-INFO
+src/gradience_api.egg-info/SOURCES.txt
+src/gradience_api.egg-info/dependency_links.txt
+src/gradience_api.egg-info/requires.txt
+src/gradience_api.egg-info/top_level.txt
+tests/test_main.py
