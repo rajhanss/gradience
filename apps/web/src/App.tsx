@@ -13,6 +13,7 @@ import {
   type SystemStatus,
 } from "./api/client";
 import { CityMap } from "./components/CityMap";
+import { CityInsightWorkspace } from "./components/CityInsightWorkspace";
 import { DevelopmentPanel } from "./components/DevelopmentPanel";
 import { MetricCard } from "./components/MetricCard";
 import { MobilityPanel } from "./components/MobilityPanel";
@@ -321,6 +322,7 @@ export function AppShell({ initialTab }: { initialTab: ProductPage }) {
               </>
             ) : null}
           </section>
+          <CityInsightWorkspace context={cityContext} heatmapAvailable={heatmapState === "completed"} />
           <HotspotPanel activityId={heatmapActivityId} latitude={latitude} longitude={longitude} />
           <WhatIfPanel latitude={latitude} longitude={longitude} />
         </main>
