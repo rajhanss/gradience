@@ -272,6 +272,11 @@ Answer: Access to FortyGuard + documented simulation. Build on our work.
 - **Multi-language** (Phase 3) — Currently: English only
 - **Private deployment** (Phase 4) — On-premise, air-gapped
 
+### Data Provenance Disclosures
+
+- **Baseline city-context metrics** — Values shown on initial page load are **modelled estimates** derived from published urban climate baselines, not live satellite reads. Live data requires clicking "Request Live FortyGuard Heatmap" (consumes API credits). Provenance tag: `derived`.
+- **Chatbot city reference reports** — Per-city briefings in the AI assistant are **compiled static estimates** sourced from published urban climate research, not real-time FortyGuard telemetry. The header clearly states "compiled estimate, not live telemetry".
+
 ---
 
 ## Credits

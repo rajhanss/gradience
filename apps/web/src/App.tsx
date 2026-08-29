@@ -273,15 +273,29 @@ export function AppShell({ initialTab, onNavigateHome, onNavigateTab }: AppShell
                 </div>
 
                 <div className="flex items-center justify-between mt-4">
-                  <button
-                    type="button"
-                    disabled={heatmapState === "submitting" || heatmapState === "processing"}
-                    onClick={() => void requestLiveThermal()}
-                    className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition flex items-center gap-2 shadow-sm disabled:opacity-60"
-                  >
-                    <RefreshCw size={14} className={heatmapState === "processing" ? "animate-spin" : ""} />
-                    {heatmapState === "submitting" || heatmapState === "processing" ? "Requesting Satellite Scan…" : "Request Live FortyGuard Heatmap"}
-                  </button>
+                  <div className="flex items-center gap-3">
+                    {/* Task 3: data-state provenance badge */}
+                    <span style={{
+                      fontSize: "11px",
+                      fontWeight: 600,
+                      color: heatmapState === "completed" ? "#10b981"
+                           : (heatmapState === "submitting" || heatmapState === "processing") ? "#f59e0b"
+                           : "#64748b"
+                    }}>
+                      {heatmapState === "completed" ? "⬤ Live FortyGuard data"
+                       : (heatmapState === "submitting" || heatmapState === "processing") ? "⬤ Requesting satellite scan…"
+                       : "⬤ Baseline estimate"}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={heatmapState === "submitting" || heatmapState === "processing"}
+                      onClick={() => void requestLiveThermal()}
+                      className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition flex items-center gap-2 shadow-sm disabled:opacity-60"
+                    >
+                      <RefreshCw size={14} className={heatmapState === "processing" ? "animate-spin" : ""} />
+                      {heatmapState === "submitting" || heatmapState === "processing" ? "Requesting Satellite Scan…" : "Request Live FortyGuard Heatmap"}
+                    </button>
+                  </div>
                   {heatmapDetail && <span className="text-xs font-medium text-slate-600 bg-slate-100 px-3 py-1 rounded-lg">{heatmapDetail}</span>}
                 </div>
               </section>
