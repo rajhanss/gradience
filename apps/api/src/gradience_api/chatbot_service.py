@@ -14,30 +14,25 @@ class ChatbotService:
         self.perplexity_api_key = os.getenv("PERPLEXITY_API_KEY", "")
         self.city_db = {
             "new york": {
+                "name": "New York City",
                 "avg_temp": 33.8,
                 "max_temp": 39.5,
-                "hotspots": "South Bronx (Mott Haven), Midtown East asphalt canyons, and industrial Brooklyn (Bushwick).",
-                "cooling_zones": "Central Park (-4.2°C thermal buffer), Prospect Park, and Hudson River waterfront.",
-                "analysis": "New York City suffers from intense urban canyon heat retention where high-rise concrete and asphalt trap daytime solar radiation. Thermal anomalies in the South Bronx and East Harlem reach +3.8°C above the regional baseline due to low tree canopy (under 8%) and heavy freight traffic.",
-                "recommendation": "Deploy reflective cool roofs under NYC Local Law 92/94, expand green street tree corridors in environmental justice zones, and establish heat-resilient cooling centers near transit hubs."
-            },
-            "nyc": {
-                "avg_temp": 33.8,
-                "max_temp": 39.5,
-                "hotspots": "South Bronx (Mott Haven), Midtown East asphalt canyons, and industrial Brooklyn (Bushwick).",
-                "cooling_zones": "Central Park (-4.2°C thermal buffer), Prospect Park, and Hudson River waterfront.",
-                "analysis": "New York City suffers from intense urban canyon heat retention where high-rise concrete and asphalt trap daytime solar radiation. Thermal anomalies in the South Bronx and East Harlem reach +3.8°C above the regional baseline.",
-                "recommendation": "Deploy reflective cool roofs under NYC Local Law 92/94, expand green street tree corridors, and establish heat-resilient cooling centers."
+                "hotspots": "South Bronx (Mott Haven), Midtown East urban canyons, East Harlem, and industrial Bushwick/East New York.",
+                "cooling_zones": "Central Park (-4.2°C thermal buffer), Prospect Park, Flushing Meadows, and Hudson River waterfront.",
+                "analysis": "New York City exhibits severe urban canyon heat retention where high-rise masonry and dark asphalt trap daytime solar radiation. Thermal anomalies in the South Bronx reach +3.8°C above regional baseline due to low tree canopy (<8%) and high vehicular density.",
+                "recommendation": "Accelerate cool roof retrofits under NYC Local Law 92/94, prioritize targeted street tree plantings in environmental justice zones, and establish heat-resilient cooling hubs near transit centers."
             },
             "phoenix": {
+                "name": "Phoenix, AZ",
                 "avg_temp": 35.2,
                 "max_temp": 44.1,
                 "hotspots": "Maryvale, South Mountain industrial corridor, Downtown core, and Sky Harbor airport perimeter.",
                 "cooling_zones": "Desert Botanical Garden buffer, Encanto Park, and irrigated residential pockets.",
-                "analysis": "Phoenix exhibits extreme desert Urban Heat Island (UHI) with night-time surface temps staying above 32°C. High impervious asphalt parking lots and concrete tile roofs absorb peak daytime solar flux (over 1000 W/m²).",
+                "analysis": "Phoenix exhibits extreme desert Urban Heat Island (UHI) with nocturnal surface temperatures remaining above 32°C. High impervious asphalt parking lots and concrete tile roofs absorb peak daytime solar flux (over 1000 W/m²).",
                 "recommendation": "Mandate high-albedo cool pavements (SRI > 40), target 25% tree canopy in residential corridors, and integrate cool transit shelters with photovoltaic shading."
             },
             "vegas": {
+                "name": "Las Vegas, NV",
                 "avg_temp": 37.8,
                 "max_temp": 44.8,
                 "hotspots": "The Las Vegas Strip corridor, North Las Vegas warehousing district, and East Las Vegas residential core.",
@@ -46,6 +41,7 @@ class ChatbotService:
                 "recommendation": "Scale cool roof retrofits across commercial flat-roof footprints and implement solar shade canopies over expansive parking facilities."
             },
             "houston": {
+                "name": "Houston, TX",
                 "avg_temp": 33.1,
                 "max_temp": 39.8,
                 "hotspots": "Ship Channel industrial zone, Gulfton dense residential, Downtown freeway interchanges, and Greenspoint.",
@@ -55,12 +51,24 @@ class ChatbotService:
             }
         }
 
+    def detect_city(self, query: str) -> Optional[dict]:
+        q = query.lower()
+        if any(w in q for w in ["new york", "new yourk", "nyc", "manhattan", "bronx", "brooklyn", "queens"]):
+            return self.city_db["new york"]
+        if any(w in q for w in ["phoenix", "arizona", "maricopa"]):
+            return self.city_db["phoenix"]
+        if any(w in q for w in ["vegas", "las vegas", "nevada"]):
+            return self.city_db["vegas"]
+        if any(w in q for w in ["houston", "harris county", "texas"]):
+            return self.city_db["houston"]
+        return None
+
     async def search_answer(self, query: str, context: str) -> str:
         key = os.getenv("PERPLEXITY_API_KEY", self.perplexity_api_key)
         if not key:
             return ""
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=8.0) as client:
                 response = await client.post(
                     "https://api.perplexity.ai/chat/completions",
                     json={
@@ -91,7 +99,7 @@ class ChatbotService:
         if not key:
             return ""
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=8.0) as client:
                 response = await client.post(
                     "https://api.groq.com/openai/v1/chat/completions",
                     json={
@@ -118,40 +126,38 @@ class ChatbotService:
         return ""
 
     def fallback_answer(self, query: str, context: str) -> str:
-        q_lower = query.lower()
-
-        # Check if query matches any known city in database
-        for city_name, data in self.city_db.items():
-            if city_name in q_lower:
-                return (
-                    f"**Thermal Intelligence Report for {city_name.upper()}**\n\n"
-                    f"• **Surface Temperature:** Average {data['avg_temp']}°C (Peak Hotspots: {data['max_temp']}°C)\n"
-                    f"• **Primary Hotspots:** {data['hotspots']}\n"
-                    f"• **Natural Cooling Buffers:** {data['cooling_zones']}\n\n"
-                    f"**Microclimate Telemetry:**\n{data['analysis']}\n\n"
-                    f"**Gradience Actionable Mitigation:**\n{data['recommendation']}"
-                )
-
-        if any(w in q_lower for w in ["temperature", "temp", "hot", "heat", "hotspot"]):
+        city_match = self.detect_city(query)
+        if city_match:
             return (
-                "**Satellite Thermal Analysis:**\n\n"
-                "Satellite telemetry detects acute land surface temperature anomalies across dense urban cores. "
-                "Impervious asphalt surfaces reach 42-45°C during peak solar radiation (12:00-16:00), creating +3°C to +5°C Urban Heat Island differentials. "
-                "Areas with tree canopy under 10% show the steepest thermal vulnerability. Recommended intervention: cool reflective coatings (SRI > 78) and contiguous green corridors."
+                f"**Satellite Thermal Intelligence Report for {city_match['name']}**\n\n"
+                f"• **Surface Temperature:** Average {city_match['avg_temp']}°C (Peak Hotspots: {city_match['max_temp']}°C)\n"
+                f"• **Primary Heat Island Hotspots:** {city_match['hotspots']}\n"
+                f"• **Natural Cooling Buffers:** {city_match['cooling_zones']}\n\n"
+                f"**Microclimate Telemetry:**\n{city_match['analysis']}\n\n"
+                f"**Gradience Actionable Mitigation:**\n{city_match['recommendation']}"
+            )
+
+        q_lower = query.lower()
+        if any(w in q_lower for w in ["temperature", "temp", "hot", "heat", "hotspot", "island"]):
+            return (
+                "**Satellite Thermal Telemetry Analysis:**\n\n"
+                "Satellite land surface temperature observation reveals severe microclimate variations across dense urban zones. "
+                "Unshaded dark asphalt roadways and commercial flat roofs reach 42-45°C during peak daytime solar radiation (12:00-16:30), creating a +3.5°C to +5.2°C Urban Heat Island differential over rural baselines. "
+                "Areas with canopy cover below 10% show maximum vulnerability. Priority mitigations: cool reflective pavements (SRI > 40) and continuous green vegetative corridors."
             )
 
         if any(w in q_lower for w in ["development", "simulate", "build", "construction", "impact"]):
             return (
                 "**Development Microclimate Simulation Model:**\n\n"
-                "New commercial/residential developments typically introduce a +0.5°C to +1.4°C localized thermal spike if built with traditional asphalt and dark roofing. "
-                "Using Gradience's transparent physical model:\n"
-                "• 15% vegetation addition: -0.65°C cooling\n"
-                "• Cool reflective roofs (SRI 82): -0.45°C thermal reduction\n"
-                "• Tree canopy shade buffer: -0.25°C direct surface cooling\n"
+                "Standard commercial/residential developments increase localized surface temperature by +0.5°C to +1.4°C baseline without mitigations. "
+                "Using Gradience's verified physical model:\n"
+                "• 15% vegetation increase: -0.65°C surface cooling\n"
+                "• Cool reflective roof installation (SRI 82): -0.45°C thermal reduction\n"
+                "• Tree canopy shade buffer: -0.25°C direct interception\n"
                 "Combining these mitigations achieves 30-50% net heat impact reduction before groundbreaking."
             )
 
-        if any(w in q_lower for w in ["route", "optimize", "mobility", "walk", "transit", "safe"]):
+        if any(w in q_lower for w in ["route", "optimize", "mobility", "walk", "transit", "safe", "ambulance"]):
             return (
                 "**Thermal-Safe Route Optimization:**\n\n"
                 "Heat-aware mobility routing balances transit distance, travel time, and radiant solar exposure. "

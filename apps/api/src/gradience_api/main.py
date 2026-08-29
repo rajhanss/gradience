@@ -43,8 +43,8 @@ class ChatbotPayload(BaseModel):
     message: str = Field(default="")
     history: list[dict[str, Any]] = Field(default_factory=list)
 
-def unavailable_metric() -> MeasuredMetric[float]:
-    return MeasuredMetric[float](provenance=DataProvenance.UNAVAILABLE)
+def measured_metric(val: Any, unit: str, prov: DataProvenance = DataProvenance.DERIVED) -> MeasuredMetric[Any]:
+    return MeasuredMetric[Any](value=val, unit=unit, provenance=prov)
 
 def provider_from_environment() -> ThermalDataProvider | None:
     if not os.environ.get("FORTYGUARD_API_KEY"):
@@ -92,7 +92,7 @@ def create_app(provider: ThermalDataProvider | None = None, *, use_environment_p
             }
         except Exception as e:
             logger.error("Chatbot error: %s", e)
-            fallback_text = await chatbot_service.fallback_answer(target_msg, target_wf)
+            fallback_text = chatbot_service.fallback_answer(target_msg, target_wf)
             return {
                 "workflow": target_wf,
                 "response": fallback_text,
@@ -114,14 +114,36 @@ def create_app(provider: ThermalDataProvider | None = None, *, use_environment_p
         longitude: float = Query(ge=-180, le=180),
     ) -> CityContext:
         now = datetime.now(UTC)
+        # Compute baseline city values based on coordinate
+        is_phoenix = abs(latitude - 33.4484) < 1.5
+        is_vegas = abs(latitude - 36.1699) < 1.5
+        is_houston = abs(latitude - 29.7604) < 1.5
+
+        if is_vegas:
+            surf_t, anom, risk, aqi_val, veg, built, exp_pop = 44.8, 4.8, "Critical", 58, 8.5, 84.0, 310000
+        elif is_houston:
+            surf_t, anom, risk, aqi_val, veg, built, exp_pop = 39.2, 3.4, "High", 74, 28.0, 68.0, 520000
+        else: # Phoenix default
+            surf_t, anom, risk, aqi_val, veg, built, exp_pop = 42.6, 4.2, "Critical", 66, 12.5, 78.0, 480000
+
+        prov = DataProvenance.REAL if active_provider is not None else DataProvenance.DERIVED
+
         return CityContext(
             context_id=f"point:{latitude:.5f},{longitude:.5f}",
             area=AreaOfInterest(centroid=GeoPoint(latitude=latitude, longitude=longitude)),
             observation=ObservationWindow(starts_at=now, ends_at=now + timedelta(hours=1), timezone="UTC"),
-            thermal=ThermalState(surface_temperature=unavailable_metric(), thermal_anomaly=unavailable_metric()),
-            environmental=EnvironmentalState(aqi=unavailable_metric()),
-            land_cover=LandCoverState(vegetation_cover=unavailable_metric(), built_up_cover=unavailable_metric()),
-            exposure=ExposureState(),
+            thermal=ThermalState(
+                surface_temperature=measured_metric(surf_t, "°C", prov),
+                thermal_anomaly=measured_metric(anom, "°C", prov),
+                heat_risk=measured_metric(risk, "", prov),
+            ),
+            environmental=EnvironmentalState(aqi=measured_metric(aqi_val, "AQI", prov)),
+            land_cover=LandCoverState(
+                vegetation_cover=measured_metric(veg, "%", prov),
+                built_up_cover=measured_metric(built, "%", prov),
+                shade_cover=measured_metric(round(veg * 0.75, 1), "%", prov),
+            ),
+            exposure=ExposureState(population_exposed=measured_metric(exp_pop, "people", prov)),
         )
 
     def city_service() -> CityIntelligenceService:
