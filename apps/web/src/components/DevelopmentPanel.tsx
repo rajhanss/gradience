@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { DevelopmentProposal, MitigationStrategy, SimulationComparison } from "../api/client";
-import { simulateDevelopment } from "../api/client";
+import { simulateDevelopment, simulateDevelopmentML } from "../api/client";
 import { MetricCard } from "./MetricCard";
 
 interface DevelopmentPanelProps {
@@ -25,6 +25,7 @@ const MITIGATION_OPTIONS: Array<{ value: MitigationStrategy; label: string; deta
 
 export function DevelopmentPanel({ latitude, longitude }: DevelopmentPanelProps) {
   const [proposal, setProposal] = useState<DevelopmentProposal>(DEFAULT_PROPOSAL);
+  const [engineMode, setEngineMode] = useState<"deterministic" | "ml">("deterministic");
   const [comparison, setComparison] = useState<SimulationComparison | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +44,11 @@ export function DevelopmentPanel({ latitude, longitude }: DevelopmentPanelProps)
     setLoading(true);
     setError(null);
     try {
-      setComparison(await simulateDevelopment(latitude, longitude, proposal));
+      if (engineMode === "ml") {
+        setComparison(await simulateDevelopmentML(latitude, longitude, proposal));
+      } else {
+        setComparison(await simulateDevelopment(latitude, longitude, proposal));
+      }
     } catch (simulationError) {
       setComparison(null);
       setError(simulationError instanceof Error ? simulationError.message : "Simulation failed.");
@@ -57,11 +62,25 @@ export function DevelopmentPanel({ latitude, longitude }: DevelopmentPanelProps)
       <div className="panel-heading">
         <div>
           <h2>Urban Impact Simulator</h2>
-          <p>Baseline land-cover response model. All deltas are modeled and labeled.</p>
+          <p>
+            {engineMode === "ml"
+              ? "Trained LinearRegression ML model (300 development profiles + uncertainty bounds)."
+              : "Deterministic land-cover response model from published climate literature."}
+          </p>
         </div>
-        <button type="button" className="primary-button" disabled={loading} onClick={() => void runSimulation()}>
-          {loading ? "Simulating…" : "Run simulation"}
-        </button>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <select
+            value={engineMode}
+            onChange={(e) => setEngineMode(e.target.value as "deterministic" | "ml")}
+            style={{ padding: "0.4rem 0.6rem", fontSize: "0.85rem", borderRadius: "6px", background: "#1e293b", color: "#f8fafc", border: "1px solid #334155" }}
+          >
+            <option value="deterministic">📐 Literature Model (Deterministic)</option>
+            <option value="ml">🤖 ML Simulator (LinearRegression)</option>
+          </select>
+          <button type="button" className="primary-button" disabled={loading} onClick={() => void runSimulation()}>
+            {loading ? "Simulating…" : `Run ${engineMode === "ml" ? "ML" : ""} Simulation`}
+          </button>
+        </div>
       </div>
 
       <section className="mitigation-picker" aria-labelledby="mitigation-heading">
