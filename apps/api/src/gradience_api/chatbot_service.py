@@ -53,13 +53,13 @@ class ChatbotService:
 
     def detect_city(self, query: str) -> Optional[dict]:
         q = query.lower()
-        if any(w in q for w in ["new york", "new yourk", "nyc", "manhattan", "bronx", "brooklyn", "queens"]):
+        if any(w in q for w in ["york", "yourk", "nyc", "manhattan", "bronx", "brooklyn", "queens"]):
             return self.city_db["new york"]
-        if any(w in q for w in ["phoenix", "arizona", "maricopa"]):
+        if any(w in q for w in ["phoenix", "arizona", "maricopa", "phx"]):
             return self.city_db["phoenix"]
-        if any(w in q for w in ["vegas", "las vegas", "nevada"]):
+        if any(w in q for w in ["vegas", "las vegas", "nevada", "strip"]):
             return self.city_db["vegas"]
-        if any(w in q for w in ["houston", "harris county", "texas"]):
+        if any(w in q for w in ["houston", "harris county", "texas", "bayou"]):
             return self.city_db["houston"]
         return None
 
@@ -138,7 +138,7 @@ class ChatbotService:
             )
 
         q_lower = query.lower()
-        if any(w in q_lower for w in ["temperature", "temp", "hot", "heat", "hotspot", "island"]):
+        if any(w in q_lower for w in ["temperature", "temp", "hot", "heat", "hotspot", "island", "iland", "spot"]):
             return (
                 "**Satellite Thermal Telemetry Analysis:**\n\n"
                 "Satellite land surface temperature observation reveals severe microclimate variations across dense urban zones. "
