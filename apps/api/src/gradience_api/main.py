@@ -35,6 +35,13 @@ from .what_if_engine import WhatIfEngine
 logger = logging.getLogger(__name__)
 
 
+def cors_origins_from_environment() -> list[str]:
+    """Read approved browser origins without opening CORS to every domain."""
+    configured = os.environ.get("GRADIENCE_CORS_ORIGINS", "")
+    origins = [origin.strip() for origin in configured.split(",") if origin.strip()]
+    return origins or ["http://127.0.0.1:5173", "http://localhost:5173"]
+
+
 def unavailable_metric() -> MeasuredMetric[float]:
     return MeasuredMetric[float](provenance=DataProvenance.UNAVAILABLE)
 
@@ -56,10 +63,7 @@ def create_app(provider: ThermalDataProvider | None = None, *, use_environment_p
     app = FastAPI(title="GRADIENCE API", version="0.1.0")
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://127.0.0.1:5173",
-            "http://localhost:5173",
-        ],
+        allow_origins=cors_origins_from_environment(),
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

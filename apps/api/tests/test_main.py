@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 
+import pytest
 from fastapi.testclient import TestClient
 
 from gradience_api.main import create_app, provider_from_environment
@@ -24,6 +25,20 @@ def test_city_context_rejects_invalid_coordinates() -> None:
 def test_health_returns_a_request_id() -> None:
     response = TestClient(create_app()).get("/health", headers={"x-request-id": "test-request"})
     assert response.headers["x-request-id"] == "test-request"
+
+
+def test_cors_origins_can_be_configured(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GRADIENCE_CORS_ORIGINS", "https://app.gradience.example, https://preview.gradience.example ")
+
+    response = TestClient(create_app()).options(
+        "/health",
+        headers={
+            "origin": "https://app.gradience.example",
+            "access-control-request-method": "GET",
+        },
+    )
+
+    assert response.headers["access-control-allow-origin"] == "https://app.gradience.example"
 
 
 def test_system_status_reports_provider_configuration() -> None:
