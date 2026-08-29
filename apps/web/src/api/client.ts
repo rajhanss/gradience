@@ -368,3 +368,95 @@ export async function respondChatbot(
     body: JSON.stringify({ workflow, message, history }),
   });
 }
+
+export async function simulateDevelopmentML(
+  latitude: number,
+  longitude: number,
+  proposal: DevelopmentProposal,
+): Promise<SimulationComparison> {
+  const params = new URLSearchParams({
+    latitude: latitude.toFixed(5),
+    longitude: longitude.toFixed(5),
+  });
+  return request<SimulationComparison>(`/v1/development-intelligence/simulate-ml?${params.toString()}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(proposal),
+  });
+}
+
+export interface HistoricalTrendAnalysis {
+  city: string;
+  latitude: number;
+  longitude: number;
+  provenance: string;
+  provenance_note: string;
+  period_start: string;
+  period_end: string;
+  multi_year_trend_rate_c_per_decade: number;
+  summer_peak_mean_c: number;
+  winter_low_mean_c: number;
+  data_points: Array<{
+    timestamp: string;
+    year: number;
+    month: number;
+    surface_temp_c: number;
+    ambient_temp_c: number;
+    thermal_anomaly_c: number;
+    vegetation_index_ndvi: number;
+  }>;
+  climate_classification: string;
+  risk_projection_2030_c: number;
+}
+
+export async function fetchHistoricalTrends(
+  latitude: number,
+  longitude: number,
+  years = 3,
+): Promise<HistoricalTrendAnalysis> {
+  const params = new URLSearchParams({
+    latitude: latitude.toFixed(5),
+    longitude: longitude.toFixed(5),
+    years: years.toString(),
+  });
+  return request<HistoricalTrendAnalysis>(`/v1/historical-trends?${params.toString()}`);
+}
+
+export interface AnomalyDetectionResult {
+  is_anomaly: boolean;
+  anomaly_score: number;
+  severity: "normal" | "warning" | "critical";
+  interpretation: string;
+  recommendation: string;
+  model: string;
+  confidence: number;
+}
+
+export async function detectAnomaly(stats: {
+  mean: number;
+  max_temp: number;
+  min_temp: number;
+  std: number;
+  pixel_count: number;
+}): Promise<AnomalyDetectionResult> {
+  const params = new URLSearchParams({
+    mean: stats.mean.toString(),
+    max_temp: stats.max_temp.toString(),
+    min_temp: stats.min_temp.toString(),
+    std: stats.std.toString(),
+    pixel_count: stats.pixel_count.toString(),
+  });
+  return request<AnomalyDetectionResult>(`/v1/anomaly/detect?${params.toString()}`, {
+    method: "POST",
+  });
+}
+
+export async function optimizeRouteWithAI(payload: RouteRequest): Promise<Record<string, unknown>> {
+  return request<Record<string, unknown>>("/v1/mobility/optimize-ai", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+
