@@ -348,3 +348,22 @@ export async function pollHeatmapUntilComplete(
   }
   throw new Error("Heatmap processing timed out.");
 }
+
+
+export interface ChatbotResponse {
+  workflow: string;
+  response: string;
+  timestamp: string;
+}
+
+export async function respondChatbot(
+  workflow: string,
+  message: string,
+  history: Array<{ role: string; content: string }> = [],
+): Promise<ChatbotResponse> {
+  return request<ChatbotResponse>("/v1/chatbot/respond", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ workflow, message, history }),
+  });
+}

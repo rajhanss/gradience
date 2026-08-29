@@ -20,55 +20,32 @@ import { MobilityPanel } from "./components/MobilityPanel";
 import { HotspotPanel } from "./components/HotspotPanel";
 import { WhatIfPanel } from "./components/WhatIfPanel";
 import { DecisionAssistant } from "./components/DecisionAssistant";
+import LandingPage from "./pages/LandingPage";
 import { normalizeHeatmapCollection, type GeoJsonFeatureCollection } from "./utils/heatmap";
 
 const DEFAULT_LATITUDE = 33.4484;
 const DEFAULT_LONGITUDE = -112.074;
 
-type InterfaceTab = "city" | "development" | "mobility" | "whatif";
 type ProductPage = "city" | "development" | "mobility";
 
-const PRODUCT_CARDS: Array<{
-  page: ProductPage;
-  index: string;
-  eyebrow: string;
-  title: string;
-  prompt: string;
-  description: string;
-}> = [
-  {
-    page: "city",
-    index: "01",
-    eyebrow: "Sense",
-    title: "City Intelligence",
-    prompt: "What is happening?",
-    description: "Observe thermal state, understand hotspots, and see exactly what the available data supports.",
-  },
-  {
-    page: "development",
-    index: "02",
-    eyebrow: "Simulate",
-    title: "Development Intelligence",
-    prompt: "What happens if we build?",
-    description: "Compare current, proposed, and optimized scenarios with a transparent impact model.",
-  },
-  {
-    page: "mobility",
-    index: "03",
-    eyebrow: "Optimize",
-    title: "Mobility & Operations",
-    prompt: "What should we do?",
-    description: "Balance time, distance, and climate exposure for people, events, and operations.",
-  },
-];
-
-function navigate(page: ProductPage | "home") {
-  window.location.hash = page === "home" ? "" : `/${page}`;
+function navigate(page: ProductPage | "home" | "observe" | "simulate" | "optimize") {
+  if (page === "home") {
+    window.location.hash = "";
+  } else if (page === "observe" || page === "city") {
+    window.location.hash = "/observe";
+  } else if (page === "simulate" || page === "development") {
+    window.location.hash = "/simulate";
+  } else if (page === "optimize" || page === "mobility") {
+    window.location.hash = "/optimize";
+  }
 }
 
 function currentPage(): ProductPage | "home" {
-  const page = window.location.hash.replace(/^#\//, "");
-  return page === "city" || page === "development" || page === "mobility" ? page : "home";
+  const raw = window.location.hash.replace(/^#\/?/, "").toLowerCase();
+  if (raw === "observe" || raw === "city") return "city";
+  if (raw === "simulate" || raw === "development") return "development";
+  if (raw === "optimize" || raw === "mobility") return "mobility";
+  return "home";
 }
 
 export function App() {
@@ -81,48 +58,13 @@ export function App() {
   }, []);
 
   if (page === "home") {
-    return <HomePage />;
+    return <LandingPage onNavigate={(target) => navigate(target)} />;
   }
   return <AppShell initialTab={page} />;
 }
 
-function HomePage() {
-  return (
-    <main className="landing-page">
-      <header className="landing-header">
-        <button type="button" className="brand-mark" onClick={() => navigate("home")} aria-label="Gradience home">
-          <span>G</span>
-          <span>GRADIENCE</span>
-        </button>
-        <p>City Climate Intelligence Platform</p>
-      </header>
-
-      <section className="landing-intro">
-        <p className="eyebrow">Three interfaces. One intelligence core.</p>
-        <h1>Build smarter.<br />Move safer.</h1>
-        <p>Understand the city, simulate change, and optimize decisions with explicit data provenance at every step.</p>
-      </section>
-
-      <section className="product-card-grid" aria-label="Gradience product interfaces">
-        {PRODUCT_CARDS.map((card) => (
-          <button key={card.page} type="button" className={`product-card product-card--${card.page}`} onClick={() => navigate(card.page)}>
-            <span className="product-card__index">{card.index}</span>
-            <span className="product-card__eyebrow">{card.eyebrow}</span>
-            <span className="product-card__title">{card.title}</span>
-            <span className="product-card__prompt">{card.prompt}</span>
-            <span className="product-card__description">{card.description}</span>
-            <span className="product-card__action">Open interface ↗</span>
-          </button>
-        ))}
-      </section>
-
-      <footer className="landing-footer">Real · Derived · Modeled · Synthetic/demo · Unavailable</footer>
-    </main>
-  );
-}
-
 export function AppShell({ initialTab }: { initialTab: ProductPage }) {
-  const [activeTab, setActiveTab] = useState<InterfaceTab>(initialTab);
+  const [activeTab, setActiveTab] = useState<ProductPage>(initialTab);
   const [latitude, setLatitude] = useState(DEFAULT_LATITUDE);
   const [longitude, setLongitude] = useState(DEFAULT_LONGITUDE);
   const [healthStatus, setHealthStatus] = useState<"loading" | "online" | "offline">("loading");
@@ -217,7 +159,7 @@ export function AppShell({ initialTab }: { initialTab: ProductPage }) {
         <div>
           <p className="eyebrow">City Climate Intelligence Platform</p>
           <button type="button" className="app-brand" onClick={() => navigate("home")}>GRADIENCE</button>
-          <p className="tagline">Build smarter. Move safer.</p>
+          <p className="tagline">Sense the heat before harm.</p>
         </div>
         <div className="status-panel">
           <div className={`status-pill status-${healthStatus}`}>
@@ -237,9 +179,9 @@ export function AppShell({ initialTab }: { initialTab: ProductPage }) {
       <nav className="interface-nav" aria-label="GRADIENCE interfaces">
         {(
           [
-            ["city", "City Intelligence"],
-            ["development", "Development Intelligence"],
-            ["mobility", "Mobility & Operations"],
+            ["city", "01 OBSERVE (City Intelligence)"],
+            ["development", "02 SIMULATE (Development)"],
+            ["mobility", "03 OPTIMIZE (Mobility)"],
           ] as const
         ).map(([tab, label]) => (
           <button
@@ -325,7 +267,7 @@ export function AppShell({ initialTab }: { initialTab: ProductPage }) {
           </section>
           <CityInsightWorkspace context={cityContext} heatmapAvailable={heatmapState === "completed"} />
           <HotspotPanel activityId={heatmapActivityId} latitude={latitude} longitude={longitude} />
-          <DecisionAssistant latitude={latitude} longitude={longitude} />
+          <DecisionAssistant latitude={latitude} longitude={longitude} workflow="observe" />
           <WhatIfPanel latitude={latitude} longitude={longitude} />
         </main>
       ) : null}

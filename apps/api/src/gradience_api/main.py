@@ -3,9 +3,11 @@ import logging
 from time import perf_counter
 from uuid import uuid4
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
-from fastapi import FastAPI, HTTPException, Query, Request, Response, status
+from fastapi import Body, FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 
 from gradience_city_domain import (
     AreaOfInterest,
@@ -24,6 +26,7 @@ from gradience_city_domain import (
 )
 from gradience_thermal_providers import FortyGuardError, FortyGuardProvider, FortyGuardSettings, HeatmapRequest, ThermalDataProvider
 
+from .chatbot_service import chatbot_service
 from .city_intelligence import CityIntelligenceService, HeatmapStatus
 from .development_intelligence import DevelopmentIntelligenceService
 from .heatmap_mapper import apply_heatmap_stats
@@ -35,11 +38,17 @@ from .what_if_engine import WhatIfEngine
 logger = logging.getLogger(__name__)
 
 
+class ChatbotPayload(BaseModel):
+    workflow: str = Field(default="observe")
+    message: str = Field(default="")
+    history: list[dict[str, Any]] = Field(default_factory=list)
+
+
 def cors_origins_from_environment() -> list[str]:
     """Read approved browser origins without opening CORS to every domain."""
     configured = os.environ.get("GRADIENCE_CORS_ORIGINS", "")
     origins = [origin.strip() for origin in configured.split(",") if origin.strip()]
-    return origins or ["http://127.0.0.1:5173", "http://localhost:5173"]
+    return origins or ["http://127.0.0.1:5173", "http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:8080"]
 
 
 def unavailable_metric() -> MeasuredMetric[float]:
@@ -92,6 +101,36 @@ def create_app(provider: ThermalDataProvider | None = None, *, use_environment_p
     @app.get("/v1/system/status", response_model=SystemStatus)
     async def system_status() -> SystemStatus:
         return SystemStatus.current(thermal_provider_configured=active_provider is not None)
+
+    @app.post("/v1/chatbot/respond")
+    async def chatbot_respond(
+        body: ChatbotPayload | None = None,
+        workflow: str | None = Query(default=None),
+        message: str | None = Query(default=None),
+        history: list = Body(default=[]),
+    ) -> dict[str, Any]:
+        """
+        AI-powered thermal intelligence chatbot.
+        Uses Perplexity (search) + Groq (generation) with fallback knowledge base.
+        """
+        target_wf = (body.workflow if body and body.workflow else workflow) or "observe"
+        target_msg = (body.message if body and body.message else message) or ""
+        target_hist = (body.history if body and body.history else history) or []
+        try:
+            response_text = await chatbot_service.answer(target_wf, target_msg, target_hist)
+            return {
+                "workflow": target_wf,
+                "response": response_text,
+                "timestamp": datetime.now(UTC).isoformat()
+            }
+        except Exception as e:
+            logger.error("Chatbot error: %s", e)
+            fallback_text = await chatbot_service.fallback_answer(target_msg, target_wf)
+            return {
+                "workflow": target_wf,
+                "response": fallback_text,
+                "timestamp": datetime.now(UTC).isoformat()
+            }
 
     @app.get("/v1/city-context", response_model=CityContext)
     async def city_context(
