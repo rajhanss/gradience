@@ -26,6 +26,7 @@ from gradience_city_domain import (
 )
 from gradience_thermal_providers import FortyGuardError, FortyGuardProvider, FortyGuardSettings, HeatmapRequest, ThermalDataProvider
 
+from .anomaly_detector import anomaly_detector
 from .chatbot_service import chatbot_service
 from .city_intelligence import CityIntelligenceService, HeatmapStatus
 from .development_intelligence import DevelopmentIntelligenceService
@@ -35,6 +36,7 @@ from .hotspot_analysis import HotspotAnalysis, HotspotAnalysisService
 from .mobility_operations import mobility_service
 from .system_status import SystemStatus
 from .what_if_engine import what_if_engine
+
 
 logger = logging.getLogger(__name__)
 
@@ -255,6 +257,65 @@ def create_app(provider: ThermalDataProvider | None = None, *, use_environment_p
         except ValueError as error:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)) from error
 
+    # ── ML Feature 1: Thermal Anomaly Detection ──────────────────────────────
+    @app.post("/v1/anomaly/detect")
+    async def detect_thermal_anomaly(
+        mean: float = Query(..., description="Mean surface temperature (°C)"),
+        max_temp: float = Query(..., description="Max temperature in heatmap"),
+        min_temp: float = Query(..., description="Min temperature in heatmap"),
+        std: float = Query(..., description="Standard deviation of temperatures"),
+        pixel_count: int = Query(..., description="Number of pixels analyzed"),
+    ) -> dict[str, Any]:
+        """
+        Detect thermal anomalies in heatmap data using Isolation Forest ML.
+
+        Trained on synthetic urban heatmap statistics (1000 normal + 50 anomaly samples).
+        Returns severity (normal | warning | critical), anomaly score, and recommendation.
+
+        Example:
+        POST /v1/anomaly/detect?mean=46.0&max_temp=48.5&min_temp=44.0&std=0.8&pixel_count=500
+        """
+        return anomaly_detector.detect({
+            "mean": mean,
+            "max": max_temp,
+            "min": min_temp,
+            "std": std,
+            "pixel_count": pixel_count,
+        })
+
+    # ── ML Feature 2: Trained Thermal Simulator ──────────────────────────────
+    @app.post("/v1/development-intelligence/simulate-ml")
+    async def simulate_development_ml(
+        proposal: DevelopmentProposal,
+        latitude: float = Query(ge=-90, le=90),
+        longitude: float = Query(ge=-180, le=180),
+    ) -> object:
+        """
+        Simulate development thermal impact using a trained LinearRegression model.
+
+        More nuanced than the rule-based /simulate endpoint — trained on 300 synthetic
+        developments to capture non-linear interactions. Includes uncertainty bounds.
+        Suitable for relative comparisons; not absolute predictions.
+
+        Provenance: MODELED (ml-simulator-v1)
+        """
+        return development_service.simulate_with_ml(latitude, longitude, proposal)
+
+    # ── ML Feature 3: AI-Powered Route Optimization ──────────────────────────
+    @app.post("/v1/mobility/optimize-ai")
+    async def optimize_route_with_ai(request: RouteRequest) -> object:
+        """
+        Optimize route using AI reasoning via Groq LLM (llama-3.3-70b-versatile).
+
+        Provides strategic guidance beyond simple distance/temperature scores:
+        timing, mitigation stops, thermal risk assessment, and expected exposure reduction.
+        Falls back gracefully to rule-based guidance if GROQ_API_KEY is not configured.
+
+        source_type: "ai_groq" | "fallback_rule_based"
+        """
+        return await mobility_service.optimize_with_ai_reasoning(request)
+
     return app
+
 
 app = create_app(use_environment_provider=True)
