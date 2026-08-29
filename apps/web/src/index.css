@@ -686,3 +686,20 @@ button {
   color: #0f172a;
   margin: 0.25rem 0;
 }
+
+
+/* Modal Article Extensions */
+.apple-modal-box--article {
+  max-width: 640px;
+}
+
+.apple-modal-box--article .apple-modal-content {
+  max-height: 65vh;
+}
+
+.city-map-container .leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 380px !important;
+  background: #f8fafc;
+}
