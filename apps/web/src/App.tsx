@@ -19,6 +19,7 @@ import { MetricCard } from "./components/MetricCard";
 import { MobilityPanel } from "./components/MobilityPanel";
 import { HotspotPanel } from "./components/HotspotPanel";
 import { WhatIfPanel } from "./components/WhatIfPanel";
+import { DecisionAssistant } from "./components/DecisionAssistant";
 import { normalizeHeatmapCollection, type GeoJsonFeatureCollection } from "./utils/heatmap";
 
 const DEFAULT_LATITUDE = 33.4484;
@@ -324,6 +325,7 @@ export function AppShell({ initialTab }: { initialTab: ProductPage }) {
           </section>
           <CityInsightWorkspace context={cityContext} heatmapAvailable={heatmapState === "completed"} />
           <HotspotPanel activityId={heatmapActivityId} latitude={latitude} longitude={longitude} />
+          <DecisionAssistant latitude={latitude} longitude={longitude} />
           <WhatIfPanel latitude={latitude} longitude={longitude} />
         </main>
       ) : null}
