@@ -15,4 +15,4 @@ RUN pip install --no-cache-dir \
 ENV PYTHONPATH=/app/apps/api/src
 EXPOSE 8000
 
-CMD ["uvicorn", "gradience_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "uvicorn gradience_api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
