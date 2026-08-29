@@ -1,6 +1,14 @@
+"""
+Multi-year historical climate and thermal trend service.
+
+Note: This service generates algorithmically modeled illustrative trends derived
+from published municipal climate baselines for supported pilot cities. It does NOT
+represent direct observed satellite telemetry.
+"""
+
 import math
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Optional
 from pydantic import BaseModel
 
 class HistoricalDataPoint(BaseModel):
@@ -16,6 +24,8 @@ class HistoricalTrendAnalysis(BaseModel):
     city: str
     latitude: float
     longitude: float
+    provenance: str = "modeled"
+    provenance_note: str = "Algorithmically generated illustrative trends derived from published municipal baselines."
     period_start: str
     period_end: str
     multi_year_trend_rate_c_per_decade: float
@@ -26,7 +36,7 @@ class HistoricalTrendAnalysis(BaseModel):
     risk_projection_2030_c: float
 
 class HistoricalTrendsService:
-    """Multi-year historical climate and thermal telemetry engine."""
+    """Multi-year historical climate and thermal trend generator."""
 
     BASELINES = {
         "phoenix": {"base_temp": 34.5, "rate": 0.85, "ndvi": 0.18, "class": "BWh Hot Desert UHI"},
@@ -34,19 +44,21 @@ class HistoricalTrendsService:
         "houston": {"base_temp": 32.4, "rate": 0.65, "ndvi": 0.38, "class": "Cfa Humid Subtropical Wet-Bulb"},
     }
 
-    def get_city_key(self, lat: float, lng: float) -> str:
-        if abs(lat - 33.4484) < 1.5:
+    def get_city_key(self, lat: float, lng: float) -> Optional[str]:
+        if abs(lat - 33.4484) < 1.5 and abs(lng - (-112.0740)) < 1.5:
             return "phoenix"
-        if abs(lat - 36.1699) < 1.5:
+        if abs(lat - 36.1699) < 1.5 and abs(lng - (-115.1398)) < 1.5:
             return "las_vegas"
-        if abs(lat - 29.7604) < 1.5:
+        if abs(lat - 29.7604) < 1.5 and abs(lng - (-95.3698)) < 1.5:
             return "houston"
-        return "phoenix"
+        return None
 
-    def generate_history(self, lat: float, lng: float, years: int = 3) -> HistoricalTrendAnalysis:
+    def generate_history(self, lat: float, lng: float, years: int = 3) -> Optional[HistoricalTrendAnalysis]:
         city_key = self.get_city_key(lat, lng)
+        if not city_key:
+            return None
+
         cfg = self.BASELINES[city_key]
-        
         now = datetime.now(UTC)
         points: list[HistoricalDataPoint] = []
         total_months = years * 12
@@ -77,6 +89,8 @@ class HistoricalTrendsService:
             city=city_key.replace("_", " ").title(),
             latitude=lat,
             longitude=lng,
+            provenance="modeled",
+            provenance_note="Algorithmically generated illustrative trends derived from published municipal baselines.",
             period_start=points[0].timestamp,
             period_end=points[-1].timestamp,
             multi_year_trend_rate_c_per_decade=cfg["rate"],

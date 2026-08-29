@@ -23,7 +23,7 @@ export function DecisionAssistant({ latitude, longitude, workflow = "observe" }:
   const [mode, setMode] = useState<"ai" | "whatif">("ai");
   const [question, setQuestion] = useState(AI_PROMPTS[0]);
   const [whatIfResult, setWhatIfResult] = useState<WhatIfResult | null>(null);
-  const [aiResult, setAiResult] = useState<string | null>(null);
+  const [aiResult, setAiResult] = useState<{ text: string; sourceType?: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,7 +39,7 @@ export function DecisionAssistant({ latitude, longitude, workflow = "observe" }:
       } else {
         const wfKey = ["city", "observe"].includes(workflow) ? "observe" : ["development", "simulate"].includes(workflow) ? "simulate" : "optimize";
         const res = await respondChatbot(wfKey, question);
-        setAiResult(res.response);
+        setAiResult({ text: res.response, sourceType: res.source_type });
         setWhatIfResult(null);
       }
     } catch (cause) {
@@ -86,7 +86,7 @@ export function DecisionAssistant({ latitude, longitude, workflow = "observe" }:
       <h2>Ask Gradience</h2>
       <p>
         {mode === "ai"
-          ? "AI thermal intelligence powered by Perplexity & Groq with real-world microclimate knowledge base."
+          ? "Climate assistant providing LLM insights (when Groq API configured), compiled city briefings, and general reference models."
           : "Deterministic engine with strict physical coefficients for development and land-cover queries."}
       </p>
 
@@ -126,8 +126,22 @@ export function DecisionAssistant({ latitude, longitude, workflow = "observe" }:
 
       {aiResult ? (
         <div className="assistant-response">
-          <span className="provenance-badge provenance-derived">AI Thermal Intelligence</span>
-          <p style={{ whiteSpace: "pre-wrap" }}>{aiResult}</p>
+          <span
+            className={`provenance-badge ${
+              aiResult.sourceType === "ai_groq"
+                ? "provenance-real"
+                : aiResult.sourceType === "reference_briefing"
+                ? "provenance-derived"
+                : "provenance-modeled"
+            }`}
+          >
+            {aiResult.sourceType === "ai_groq"
+              ? "Live AI (Groq)"
+              : aiResult.sourceType === "reference_briefing"
+              ? "Reference Briefing"
+              : "General Reference"}
+          </span>
+          <p style={{ whiteSpace: "pre-wrap" }}>{aiResult.text}</p>
         </div>
       ) : null}
 

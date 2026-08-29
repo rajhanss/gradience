@@ -45,11 +45,10 @@ CITY_INTELLIGENCE_REPORTS = {
 }
 
 class ChatbotService:
-    """AI-powered thermal intelligence assistant using Groq and Perplexity APIs with intelligent city fallback."""
+    """AI-powered thermal intelligence assistant using Groq API with intelligent city fallback."""
 
     def __init__(self):
         self.groq_api_key = os.getenv("GROQ_API_KEY", "")
-        self.perplexity_api_key = os.getenv("PERPLEXITY_API_KEY", "")
 
     def get_city_report(self, query: str) -> Optional[str]:
         q = query.lower()
@@ -66,58 +65,67 @@ class ChatbotService:
         if key and key in CITY_INTELLIGENCE_REPORTS:
             d = CITY_INTELLIGENCE_REPORTS[key]
             return (
-                f"**Satellite Thermal Intelligence Report for {d['name']}**\n\n"
+                f"**Reference Briefing — {d['name']} (compiled estimate, not live telemetry)**\n\n"
                 f"• **Surface Temperature:** Average {d['avg_temp']}°C (Peak Hotspots: {d['max_temp']}°C)\n"
                 f"• **Primary Heat Island Hotspots:** {d['hotspots']}\n"
                 f"• **Natural Cooling Buffers:** {d['cooling_zones']}\n\n"
-                f"**Microclimate Telemetry:**\n{d['telemetry']}\n\n"
-                f"**Gradience Actionable Mitigation:**\n{d['gradience_plan']}"
+                f"**Microclimate Context:**\n{d['telemetry']}\n\n"
+                f"**Gradience Actionable Mitigation:**\n{d['gradience_plan']}\n\n"
+                f"*Note: City reference data is a compiled static estimate — not a live FortyGuard satellite read. "
+                f"Click ‘Request Live FortyGuard Heatmap’ for real satellite telemetry.*"
             )
         return None
 
     def fallback_answer(self, query: str, context: str) -> str:
-        city_rep = self.get_city_report(query)
-        if city_rep:
-            return city_rep
-
         q_lower = query.lower()
         if any(w in q_lower for w in ["temperature", "temp", "hot", "heat", "hotspot", "island", "iland", "spot"]):
             return (
-                "**Satellite Thermal Telemetry Analysis:**\n\n"
-                "Satellite land surface temperature observation reveals severe microclimate variations across dense urban zones. "
-                "Unshaded dark asphalt roadways and commercial flat roofs reach 42-45°C during peak daytime solar radiation (12:00-16:30), creating a +3.5°C to +5.2°C Urban Heat Island differential over rural baselines. "
-                "Areas with canopy cover below 10% show maximum vulnerability. Priority mitigations: cool reflective pavements (SRI > 40) and continuous green vegetative corridors."
+                "**General Reference — Urban Heat Island Patterns (compiled model, not live telemetry)**\n\n"
+                "Urban land surface temperatures vary significantly by land cover. Unshaded asphalt roadways and "
+                "commercial flat roofs typically reach 42–45°C during peak daytime solar radiation (12:00–16:30), "
+                "creating a +3.5°C to +5.2°C Urban Heat Island differential over rural baselines. "
+                "Areas with canopy cover below 10% show maximum vulnerability. "
+                "Priority mitigations: cool reflective pavements (SRI > 40) and continuous green vegetative corridors.\n\n"
+                "*Note: These are general reference values from published urban climate research, not a live FortyGuard "
+                "satellite read. For pilot-city live data (Phoenix, Las Vegas, Houston), click "
+                "'Request Live FortyGuard Heatmap'.*"
             )
 
         if any(w in q_lower for w in ["development", "simulate", "build", "construction", "impact"]):
             return (
-                "**Development Microclimate Simulation Model:**\n\n"
-                "Standard commercial/residential developments increase localized surface temperature by +0.5°C to +1.4°C baseline without mitigations. "
-                "Using Gradience's verified physical model:\n"
-                "• 15% vegetation increase: -0.65°C surface cooling\n"
-                "• Cool reflective roof installation (SRI 82): -0.45°C thermal reduction\n"
-                "• Tree canopy shade buffer: -0.25°C direct interception\n"
-                "Combining these mitigations achieves 30-50% net heat impact reduction before groundbreaking."
+                "**General Reference — Development Microclimate Model (documented coefficients, not live telemetry)**\n\n"
+                "Standard commercial/residential developments increase localized surface temperature by +0.5°C to "
+                "+1.4°C baseline without mitigations. Based on Gradience's documented physical model coefficients:\n"
+                "• 15% vegetation increase: −0.65°C surface cooling\n"
+                "• Cool reflective roof installation (SRI 82): −0.45°C thermal reduction\n"
+                "• Tree canopy shade buffer: −0.25°C direct interception\n"
+                "Combining these mitigations achieves 30–50% net heat impact reduction before groundbreaking.\n\n"
+                "*Note: Values are deterministic model coefficients, not results of a live simulation run. "
+                "Use the Simulate workflow for a location-specific assessment.*"
             )
 
         if any(w in q_lower for w in ["route", "optimize", "mobility", "walk", "transit", "safe", "ambulance"]):
             return (
-                "**Thermal-Safe Route Optimization:**\n\n"
+                "**General Reference — Thermal-Safe Route Optimization (model estimate, not live telemetry)**\n\n"
                 "Heat-aware mobility routing balances transit distance, travel time, and radiant solar exposure. "
-                "By steering pedestrians, transit fleets, and vulnerable populations through tree-shaded corridors and park cooling shadows, "
-                "cumulative radiant thermal exposure is reduced by 18-25% compared to unshaded arterial highways."
+                "By steering pedestrians, transit fleets, and vulnerable populations through tree-shaded corridors "
+                "and park cooling shadows, cumulative radiant thermal exposure is reduced by 18–25% compared to "
+                "unshaded arterial highways.\n\n"
+                "*Note: These are general model estimates. Use the Optimize workflow for a location-specific route.*"
             )
 
         return (
             f"**Gradience Climate Assistant** ({context})\n\n"
-            "I analyze FortyGuard satellite telemetry across Phoenix, Las Vegas, Houston, New York City, and other metropolitan centers. "
-            "I can assist with real-time hotspot detection, development simulation coefficients, and climate-aware route optimization. What specific parcel or corridor would you like to examine?"
+            "I can provide compiled reference briefings for Phoenix (AZ), Las Vegas (NV), Houston (TX), and "
+            "New York City (NY) — plus general heat-island and mitigation guidance. "
+            "For live FortyGuard satellite thermal data, use the pilot-city heatmap workflow (Phoenix, Las Vegas, Houston). "
+            "What specific location or scenario would you like to explore?"
         )
 
-    async def answer(self, workflow: str, query: str, history: list = None) -> str:
+    async def answer(self, workflow: str, query: str, history: list = None) -> tuple[str, str]:
         city_rep = self.get_city_report(query)
         if city_rep:
-            return city_rep
+            return (city_rep, "reference_briefing")
 
         context_map = {
             "observe": "Real-time FortyGuard satellite thermal observation and hotspot detection",
@@ -151,10 +159,12 @@ class ChatbotService:
                         data = response.json()
                         choices = data.get("choices", [])
                         if choices and "message" in choices[0]:
-                            return choices[0]["message"].get("content", "")
+                            text = choices[0]["message"].get("content", "")
+                            if text:
+                                return (text, "ai_groq")
             except Exception as e:
                 logger.warning("Groq inference error: %s", e)
 
-        return self.fallback_answer(query, context)
+        return (self.fallback_answer(query, context), "general_reference")
 
 chatbot_service = ChatbotService()

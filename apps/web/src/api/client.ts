@@ -186,7 +186,7 @@ const API_BASE = import.meta.env.VITE_API_BASE ?? "/api";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
-    headers: { Accept: "application/json", ...(init?.headers ?? {}) },
+    headers: { Accept: "application/json", ...init?.headers },
     ...init,
   });
 
@@ -353,6 +353,7 @@ export async function pollHeatmapUntilComplete(
 export interface ChatbotResponse {
   workflow: string;
   response: string;
+  source_type?: "ai_groq" | "reference_briefing" | "general_reference" | string;
   timestamp: string;
 }
 

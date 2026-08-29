@@ -59,17 +59,29 @@ def create_app(provider: ThermalDataProvider | None = None, *, use_environment_p
     development_service = DevelopmentIntelligenceService()
     hotspot_service = HotspotAnalysisService()
 
+    raw_origins = os.environ.get("GRADIENCE_CORS_ORIGINS", "")
+    if raw_origins:
+        cors_origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
+        allow_creds = True
+    else:
+        cors_origins = ["*"]
+        allow_creds = False
+
     app = FastAPI(title="GRADIENCE API", version="0.2.0")
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
+        allow_origins=cors_origins,
+        allow_credentials=allow_creds,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
     @app.get("/health")
-    async def health() -> dict[str, str]:
+    async def health(request: Request, response: Response) -> dict[str, str]:
+        # Echo x-request-id back so callers can correlate responses (test contract)
+        req_id = request.headers.get("x-request-id")
+        if req_id:
+            response.headers["x-request-id"] = req_id
         return {"status": "ok"}
 
     @app.get("/v1/system/status", response_model=SystemStatus)
@@ -82,10 +94,11 @@ def create_app(provider: ThermalDataProvider | None = None, *, use_environment_p
         target_msg = body.message or ""
         target_hist = body.history or []
         try:
-            response_text = await chatbot_service.answer(target_wf, target_msg, target_hist)
+            response_text, source_type = await chatbot_service.answer(target_wf, target_msg, target_hist)
             return {
                 "workflow": target_wf,
                 "response": response_text,
+                "source_type": source_type,
                 "timestamp": datetime.now(UTC).isoformat()
             }
         except Exception as e:
@@ -94,6 +107,7 @@ def create_app(provider: ThermalDataProvider | None = None, *, use_environment_p
             return {
                 "workflow": target_wf,
                 "response": fallback_text,
+                "source_type": "general_reference",
                 "timestamp": datetime.now(UTC).isoformat()
             }
 
@@ -104,6 +118,11 @@ def create_app(provider: ThermalDataProvider | None = None, *, use_environment_p
         years: int = Query(ge=1, le=10, default=3),
     ) -> dict[str, Any]:
         analysis = historical_service.generate_history(latitude, longitude, years)
+        if analysis is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Historical trends are only available for supported pilot cities (Phoenix, Las Vegas, Houston).",
+            )
         return analysis.model_dump()
 
     @app.get("/v1/city-context", response_model=CityContext)
@@ -112,19 +131,44 @@ def create_app(provider: ThermalDataProvider | None = None, *, use_environment_p
         longitude: float = Query(ge=-180, le=180),
     ) -> CityContext:
         now = datetime.now(UTC)
-        is_phoenix = abs(latitude - 33.4484) < 1.5
-        is_vegas = abs(latitude - 36.1699) < 1.5
-        is_houston = abs(latitude - 29.7604) < 1.5
+        is_phoenix = abs(latitude - 33.4484) < 1.5 and abs(longitude - (-112.0740)) < 1.5
+        is_vegas   = abs(latitude - 36.1699) < 1.5 and abs(longitude - (-115.1398)) < 1.5
+        is_houston = abs(latitude - 29.7604) < 1.5 and abs(longitude - (-95.3698))  < 1.5
+
+        base = CityContext(
+            context_id=f"point:{latitude:.5f},{longitude:.5f}",
+            area=AreaOfInterest(centroid=GeoPoint(latitude=latitude, longitude=longitude)),
+            observation=ObservationWindow(starts_at=now, ends_at=now + timedelta(hours=1), timezone="UTC"),
+            thermal=ThermalState(
+                surface_temperature=unavailable_metric(),
+                thermal_anomaly=unavailable_metric(),
+                heat_risk=unavailable_metric(),
+            ),
+            environmental=EnvironmentalState(aqi=unavailable_metric()),
+            land_cover=LandCoverState(
+                vegetation_cover=unavailable_metric(),
+                built_up_cover=unavailable_metric(),
+                shade_cover=unavailable_metric(),
+            ),
+            exposure=ExposureState(population_exposed=unavailable_metric()),
+        )
+
+        if not (is_phoenix or is_vegas or is_houston):
+            # Coordinate is not within a pilot city — return unavailable rather than
+            # fabricating numbers for an unsupported location.
+            return base
+
+        # Always DERIVED here — no FortyGuard API call happens in this path.
+        # Only apply_heatmap_stats() (called from context_from_heatmap) may tag values REAL.
+        prov = DataProvenance.DERIVED
+        src = "gradience_published_climate_baselines"
 
         if is_vegas:
             surf_t, anom, risk, aqi_val, veg, built, exp_pop = 44.8, 4.8, "Critical", 58.0, 8.5, 84.0, 310000
         elif is_houston:
             surf_t, anom, risk, aqi_val, veg, built, exp_pop = 39.2, 3.4, "High", 74.0, 28.0, 68.0, 520000
-        else: # Phoenix
+        else:  # Phoenix
             surf_t, anom, risk, aqi_val, veg, built, exp_pop = 42.6, 4.2, "Critical", 66.0, 12.5, 78.0, 480000
-
-        prov = DataProvenance.REAL if active_provider is not None else DataProvenance.DERIVED
-        src = "fortyguard_provider" if active_provider is not None else "fortyguard_satellite_telemetry"
 
         return CityContext(
             context_id=f"point:{latitude:.5f},{longitude:.5f}",

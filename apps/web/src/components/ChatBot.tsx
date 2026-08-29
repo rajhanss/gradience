@@ -13,6 +13,7 @@ interface Message {
   sender: "user" | "assistant";
   text: string;
   timestamp: string;
+  isError?: boolean;
 }
 
 const PROMPT_SUGGESTIONS: Record<string, string[]> = {
@@ -41,7 +42,7 @@ export function ChatBot({ workflow }: ChatBotProps) {
     {
       id: "welcome",
       sender: "assistant",
-      text: `Welcome to Gradience Intelligence. I am your climate assistant for the ${normalizedWf.toUpperCase()} workflow. Ask anything about satellite thermal readings, simulation parameters, or heat-aware routing.`,
+      text: `Welcome to Gradience Intelligence. I am your climate assistant for the ${normalizedWf.toUpperCase()} workflow. Ask anything about thermal reference data, simulation parameters, or heat-aware routing.`,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
@@ -74,13 +75,14 @@ export function ChatBot({ workflow }: ChatBotProps) {
       };
       setMessages((prev) => [...prev, botMsg]);
     } catch {
-      const fallback: Message = {
+      const errorMsg: Message = {
         id: String(Date.now() + 1),
         sender: "assistant",
-        text: "Thermal telemetry indicates downtown urban hotspots reaching 38-44°C. Strategic mitigations with tree canopy (-0.25°C) and cool reflective pavements (-0.18°C) achieve 30-50% thermal impact reduction.",
+        isError: true,
+        text: "Unable to complete request. Please check your network connection or try again shortly.",
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
-      setMessages((prev) => [...prev, fallback]);
+      setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setLoading(false);
     }
@@ -101,14 +103,19 @@ export function ChatBot({ workflow }: ChatBotProps) {
 
       <div className="apple-chat-body">
         {messages.map((m) => (
-          <div key={m.id} className={`apple-chat-bubble apple-chat-bubble-${m.sender}`}>
+          <div
+            key={m.id}
+            className={`apple-chat-bubble apple-chat-bubble-${m.sender} ${
+              m.isError ? "border border-red-300 bg-red-50 text-red-800" : ""
+            }`}
+          >
             <p className="apple-chat-text">{m.text}</p>
             <span className="apple-chat-time">{m.timestamp}</span>
           </div>
         ))}
         {loading && (
           <div className="apple-chat-bubble apple-chat-bubble-assistant apple-chat-loading">
-            <span className="text-xs text-slate-500">Synthesizing satellite telemetry…</span>
+            <span className="text-xs text-slate-500">Thinking…</span>
           </div>
         )}
       </div>
