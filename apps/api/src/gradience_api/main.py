@@ -1,7 +1,10 @@
 import os
+import logging
+from time import perf_counter
+from uuid import uuid4
 from datetime import UTC, datetime, timedelta
 
-from fastapi import FastAPI, HTTPException, Query, status
+from fastapi import FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from gradience_city_domain import (
@@ -28,6 +31,8 @@ from .hotspot_analysis import HotspotAnalysis, HotspotAnalysisService
 from .mobility_operations import MobilityOperationsService
 from .system_status import SystemStatus
 from .what_if_engine import WhatIfEngine
+
+logger = logging.getLogger(__name__)
 
 
 def unavailable_metric() -> MeasuredMetric[float]:
@@ -59,6 +64,22 @@ def create_app(provider: ThermalDataProvider | None = None, *, use_environment_p
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @app.middleware("http")
+    async def request_observability(request: Request, call_next: object) -> Response:
+        request_id = request.headers.get("x-request-id", str(uuid4()))
+        started_at = perf_counter()
+        response = await call_next(request)  # type: ignore[operator]
+        response.headers["x-request-id"] = request_id
+        logger.info(
+            "api_request request_id=%s method=%s path=%s status=%s duration_ms=%.1f",
+            request_id,
+            request.method,
+            request.url.path,
+            response.status_code,
+            (perf_counter() - started_at) * 1000,
+        )
+        return response
 
     @app.get("/health")
     async def health() -> dict[str, str]:

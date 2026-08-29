@@ -21,6 +21,11 @@ def test_city_context_rejects_invalid_coordinates() -> None:
     assert response.status_code == 422
 
 
+def test_health_returns_a_request_id() -> None:
+    response = TestClient(create_app()).get("/health", headers={"x-request-id": "test-request"})
+    assert response.headers["x-request-id"] == "test-request"
+
+
 def test_system_status_reports_provider_configuration() -> None:
     response = TestClient(create_app()).get("/v1/system/status")
     assert response.status_code == 200
