@@ -26,7 +26,7 @@ class WhatIfEngine:
         llm_synthesis = ""
 
         if "vegetation" in q_lower or "green" in q_lower or "trees" in q_lower:
-            intent = "land_cover_modification"
+            intent = "vegetation_change"
             if "remove" in q_lower or "decrease" in q_lower or "cut" in q_lower:
                 delta_c = +0.48
                 summary = "Removing 10% vegetation increases localized land surface temperature by +0.48°C."

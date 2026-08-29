@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  api-tests:
+    name: Python API Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install API dependencies
+        working-directory: apps/api
+        run: |
+          pip install uv
+          uv pip install --system -e .[dev]
+          uv pip install --system -e ../../packages/city-domain
+          uv pip install --system -e ../../packages/thermal-providers
+
+      - name: Run tests
+        working-directory: apps/api
+        run: pytest tests/ -v --tb=short
+
+  frontend-lint:
+    name: Frontend Lint & Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: apps/web
+        run: npm ci
+
+      - name: Lint
+        working-directory: apps/web
+        run: npx oxlint@latest src/ --deny-warnings
+
+      - name: Type-check & build
+        working-directory: apps/web
+        run: npm run build
