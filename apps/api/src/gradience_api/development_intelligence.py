@@ -120,3 +120,64 @@ class DevelopmentIntelligenceService:
             applied_mitigations=proposal.mitigation_strategies,
             recommendations=[MITIGATION_LABELS[strategy] for strategy in proposal.mitigation_strategies],
         )
+
+    def simulate_with_ml(self, latitude: float, longitude: float, proposal: DevelopmentProposal) -> SimulationComparison:
+        """
+        Simulate development impact using trained ML model (LinearRegression).
+
+        More nuanced than hardcoded coefficients; accounts for complex interactions
+        between vegetation loss, built-up gain, footprint size, and development type.
+        Suitable for relative comparisons; not absolute predictions.
+        """
+        from .ml_simulator import ml_simulator
+
+        current = ScenarioSnapshot(label="current", context=_base_context(latitude, longitude))
+
+        veg_change = proposal.land_cover_changes.vegetation_change_pct
+        built_change = proposal.land_cover_changes.built_up_change_pct
+        footprint = proposal.footprint_hectares
+        dev_type_mult = TYPE_MULTIPLIERS[proposal.development_type]
+
+        ml_prediction = ml_simulator.predict_delta(veg_change, built_change, footprint, dev_type_mult)
+        proposed_delta = ml_prediction["delta_temperature"]
+
+        proposed = ScenarioSnapshot(
+            label="proposed",
+            context=_base_context(latitude, longitude),
+            delta_surface_temperature=MeasuredMetric[float](
+                value=proposed_delta,
+                unit="°C",
+                provenance=DataProvenance.MODELED,
+                source="ml-simulator-v1",
+                observed_at=datetime.now(UTC),
+                method="LinearRegression (trained on 300 synthetic developments)",
+                uncertainty=ml_prediction["uncertainty"],
+            ),
+        )
+
+        optimized_delta = _optimized_delta(proposed_delta, proposal.mitigation_strategies)
+        optimized = ScenarioSnapshot(
+            label="optimized",
+            context=_base_context(latitude, longitude),
+            delta_surface_temperature=MeasuredMetric[float](
+                value=optimized_delta,
+                unit="°C",
+                provenance=DataProvenance.MODELED,
+                source="ml-simulator-v1",
+                observed_at=datetime.now(UTC),
+                method="LinearRegression + Mitigations",
+                uncertainty=ml_prediction["uncertainty"],
+            ),
+        )
+
+        return SimulationComparison(
+            scenario_id=str(uuid4()),
+            method="ml-simulator-v1: LinearRegression on 300 synthetic developments",
+            source="ML_SIMULATOR",
+            current=current,
+            proposed=proposed,
+            optimized=optimized,
+            applied_mitigations=proposal.mitigation_strategies,
+            recommendations=[MITIGATION_LABELS[strategy] for strategy in proposal.mitigation_strategies],
+        )
+
