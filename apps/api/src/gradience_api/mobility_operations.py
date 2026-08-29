@@ -1,6 +1,11 @@
+import logging
 import math
+import os
 from datetime import timedelta, datetime
 from typing import Any
+
+import httpx
+
 from gradience_city_domain import (
     DataProvenance,
     GeoPoint,
@@ -10,6 +15,9 @@ from gradience_city_domain import (
     RouteRequest,
     TimeWindowOption,
 )
+
+logger = logging.getLogger(__name__)
+
 
 def _metric(val: Any, unit: str = "") -> MeasuredMetric[Any]:
     return MeasuredMetric[Any](
@@ -127,4 +135,94 @@ class MobilityOperationsService:
             ],
         )
 
+    async def optimize_with_ai_reasoning(self, request: RouteRequest) -> dict[str, Any]:
+        """
+        Optimize route using AI reasoning via Groq LLM.
+
+        Goes beyond simple distance + temperature scoring to provide strategic guidance
+        on timing, mitigation, and thermal exposure reduction for city planners and
+        emergency response teams.
+
+        Falls back to a rule-based recommendation when GROQ_API_KEY is not set
+        or the Groq call times out / fails. Always returns a valid response.
+        """
+        city = getattr(request, "city", None) or "the target city"
+        o_lat = request.origin.latitude
+        o_lng = request.origin.longitude
+        d_lat = request.destination.latitude
+        d_lng = request.destination.longitude
+
+        prompt = (
+            f"You are an expert in urban thermal management and emergency response routing.\n\n"
+            f"A team needs to travel from ({o_lat:.4f}, {o_lng:.4f}) "
+            f"to ({d_lat:.4f}, {d_lng:.4f}) in {city}.\n\n"
+            f"Based on typical urban thermal patterns for {city}, provide:\n\n"
+            f"1. **Optimal Route:** Which neighborhoods/corridors to prioritize (shade, cooling zones)\n"
+            f"2. **Timing:** Best time of day to travel (avoid peak heat hours)\n"
+            f"3. **Mitigation:** Specific stops at cooling centers, water stations, rest points\n"
+            f"4. **Risk Assessment:** Thermal exposure risks and how to minimize them\n"
+            f"5. **Success Metrics:** Expected reduction in thermal exposure (%)\n\n"
+            f"Be specific. Provide actionable, real-world guidance.\n"
+            f"Format as JSON with keys: route, timing, mitigation, risk_assessment, expected_reduction."
+        )
+
+        groq_key = os.getenv("GROQ_API_KEY")
+        if not groq_key:
+            return {
+                "status": "fallback",
+                "recommendation": "Route through shaded tree-lined corridors and malls with cooling stops.",
+                "timing": "Early morning (5–8 AM) or evening (6–9 PM) to avoid peak solar flux.",
+                "expected_reduction": "18–25%",
+                "model": "Rule-based fallback (GROQ_API_KEY not configured)",
+                "start": {"lat": o_lat, "lng": o_lng},
+                "end": {"lat": d_lat, "lng": d_lng},
+            }
+
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    json={
+                        "model": "llama-3.3-70b-versatile",
+                        "messages": [
+                            {
+                                "role": "system",
+                                "content": (
+                                    "You are an expert in urban thermal management, "
+                                    "emergency response, and route optimization. "
+                                    "Provide strategic, actionable guidance."
+                                ),
+                            },
+                            {"role": "user", "content": prompt},
+                        ],
+                        "temperature": 0.4,
+                        "max_tokens": 600,
+                    },
+                    headers={"Authorization": f"Bearer {groq_key}"},
+                )
+
+            if response.status_code == 200:
+                ai_text = response.json()["choices"][0]["message"]["content"]
+                return {
+                    "status": "success",
+                    "ai_reasoning": ai_text,
+                    "model": "Groq (llama-3.3-70b-versatile)",
+                    "start": {"lat": o_lat, "lng": o_lng},
+                    "end": {"lat": d_lat, "lng": d_lng},
+                }
+
+            logger.warning("Groq API returned HTTP %s", response.status_code)
+        except Exception as exc:
+            logger.warning("Groq AI optimization failed: %s", exc)
+
+        return {
+            "status": "fallback",
+            "recommendation": "Route through shaded areas during cooler hours.",
+            "model": "Rule-based fallback (Groq API unavailable)",
+            "start": {"lat": o_lat, "lng": o_lng},
+            "end": {"lat": d_lat, "lng": d_lng},
+        }
+
+
 mobility_service = MobilityOperationsService()
+
