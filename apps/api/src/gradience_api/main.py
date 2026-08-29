@@ -77,15 +77,10 @@ def create_app(provider: ThermalDataProvider | None = None, *, use_environment_p
         return SystemStatus.current(thermal_provider_configured=active_provider is not None)
 
     @app.post("/v1/chatbot/respond")
-    async def chatbot_respond(
-        body: ChatbotPayload | None = None,
-        workflow: str | None = Query(default=None),
-        message: str | None = Query(default=None),
-        history: list = Body(default=[]),
-    ) -> dict[str, Any]:
-        target_wf = (body.workflow if body and body.workflow else workflow) or "observe"
-        target_msg = (body.message if body and body.message else message) or ""
-        target_hist = (body.history if body and body.history else history) or []
+    async def chatbot_respond(body: ChatbotPayload = Body(default_factory=ChatbotPayload)) -> dict[str, Any]:
+        target_wf = body.workflow or "observe"
+        target_msg = body.message or ""
+        target_hist = body.history or []
         try:
             response_text = await chatbot_service.answer(target_wf, target_msg, target_hist)
             return {
