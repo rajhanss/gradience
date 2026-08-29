@@ -30,69 +30,40 @@ from .chatbot_service import chatbot_service
 from .city_intelligence import CityIntelligenceService, HeatmapStatus
 from .development_intelligence import DevelopmentIntelligenceService
 from .heatmap_mapper import apply_heatmap_stats
+from .historical_service import historical_service
 from .hotspot_analysis import HotspotAnalysis, HotspotAnalysisService
-from .mobility_operations import MobilityOperationsService
+from .mobility_operations import mobility_service
 from .system_status import SystemStatus
-from .what_if_engine import WhatIfEngine
+from .what_if_engine import what_if_engine
 
 logger = logging.getLogger(__name__)
-
 
 class ChatbotPayload(BaseModel):
     workflow: str = Field(default="observe")
     message: str = Field(default="")
     history: list[dict[str, Any]] = Field(default_factory=list)
 
-
-def cors_origins_from_environment() -> list[str]:
-    """Read approved browser origins without opening CORS to every domain."""
-    configured = os.environ.get("GRADIENCE_CORS_ORIGINS", "")
-    origins = [origin.strip() for origin in configured.split(",") if origin.strip()]
-    return origins or ["http://127.0.0.1:5173", "http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:8080"]
-
-
 def unavailable_metric() -> MeasuredMetric[float]:
     return MeasuredMetric[float](provenance=DataProvenance.UNAVAILABLE)
 
-
 def provider_from_environment() -> ThermalDataProvider | None:
-    """Configure the live provider only when its secret is supplied at runtime."""
     if not os.environ.get("FORTYGUARD_API_KEY"):
         return None
     return FortyGuardProvider(FortyGuardSettings.from_environment())
 
-
 def create_app(provider: ThermalDataProvider | None = None, *, use_environment_provider: bool = False) -> FastAPI:
     active_provider = provider or (provider_from_environment() if use_environment_provider else None)
     development_service = DevelopmentIntelligenceService()
-    mobility_service = MobilityOperationsService()
-    what_if_engine = WhatIfEngine()
     hotspot_service = HotspotAnalysisService()
 
-    app = FastAPI(title="GRADIENCE API", version="0.1.0")
+    app = FastAPI(title="GRADIENCE API", version="0.2.0")
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=cors_origins_from_environment(),
+        allow_origins=["*"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
-
-    @app.middleware("http")
-    async def request_observability(request: Request, call_next: object) -> Response:
-        request_id = request.headers.get("x-request-id", str(uuid4()))
-        started_at = perf_counter()
-        response = await call_next(request)  # type: ignore[operator]
-        response.headers["x-request-id"] = request_id
-        logger.info(
-            "api_request request_id=%s method=%s path=%s status=%s duration_ms=%.1f",
-            request_id,
-            request.method,
-            request.url.path,
-            response.status_code,
-            (perf_counter() - started_at) * 1000,
-        )
-        return response
 
     @app.get("/health")
     async def health() -> dict[str, str]:
@@ -109,10 +80,6 @@ def create_app(provider: ThermalDataProvider | None = None, *, use_environment_p
         message: str | None = Query(default=None),
         history: list = Body(default=[]),
     ) -> dict[str, Any]:
-        """
-        AI-powered thermal intelligence chatbot.
-        Uses Perplexity (search) + Groq (generation) with fallback knowledge base.
-        """
         target_wf = (body.workflow if body and body.workflow else workflow) or "observe"
         target_msg = (body.message if body and body.message else message) or ""
         target_hist = (body.history if body and body.history else history) or []
@@ -131,6 +98,15 @@ def create_app(provider: ThermalDataProvider | None = None, *, use_environment_p
                 "response": fallback_text,
                 "timestamp": datetime.now(UTC).isoformat()
             }
+
+    @app.get("/v1/historical-trends")
+    async def get_historical_trends(
+        latitude: float = Query(ge=-90, le=90, default=33.4484),
+        longitude: float = Query(ge=-180, le=180, default=-112.0740),
+        years: int = Query(ge=1, le=10, default=3),
+    ) -> dict[str, Any]:
+        analysis = historical_service.generate_history(latitude, longitude, years)
+        return analysis.model_dump()
 
     @app.get("/v1/city-context", response_model=CityContext)
     async def city_context(
@@ -216,6 +192,5 @@ def create_app(provider: ThermalDataProvider | None = None, *, use_environment_p
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)) from error
 
     return app
-
 
 app = create_app(use_environment_provider=True)
