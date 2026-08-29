@@ -71,6 +71,11 @@ resource "google_cloud_run_v2_service" "web" {
     containers {
       image = var.web_image
 
+      env {
+        name  = "API_UPSTREAM"
+        value = google_cloud_run_v2_service.api.uri
+      }
+
       ports {
         container_port = 80
       }

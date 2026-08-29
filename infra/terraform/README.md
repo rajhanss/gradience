@@ -13,7 +13,7 @@ This directory defines two public Cloud Run services: `gradience-api` and `gradi
    'YOUR_FORTYGUARD_KEY' | gcloud secrets versions add fortyguard-api-key --data-file=-
    ```
 
-4. Build and publish immutable API and web images to a registry you control. Build the web image with `VITE_API_BASE` set to the API URL; then provide those two image URIs to Terraform.
+4. Build and publish immutable API and web images to a registry you control. The web container receives the API URL at runtime, so it does not need a per-environment rebuild.
 
 ## Apply
 
@@ -34,4 +34,4 @@ terraform plan
 terraform apply
 ```
 
-For the first release, deploy the API first, note its URL, build the web image with `--build-arg VITE_API_BASE=API_URL`, and then apply the final two-service configuration with the resulting web origin. Confirm the displayed plan before applying it.
+Terraform supplies the web container with the deployed API URL automatically. Confirm the displayed plan before applying it.
