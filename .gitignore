@@ -29,3 +29,10 @@ Thumbs.db
 *.log
 *.sqlite3
 artifacts/
+
+# Terraform local state and per-environment inputs
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json

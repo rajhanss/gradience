@@ -106,12 +106,13 @@ Three interfaces share one backend core:
 - Development simulator with current / proposed / optimized comparison and explicit mitigation strategies
 - Mobility workspace for personal trips, outdoor events, and temperature-sensitive deliveries
 - Deterministic What-If decision layer (LLM-ready interface)
+- In-app deterministic Decision Assistant, with clear provenance and no invented live data
 - React map-centric dashboard with dedicated City, Development, and Mobility pages
 - Docker Compose for local production-like runs
+- Cloud Run Terraform configuration with Secret Manager-based FortyGuard key injection
 
 ## Remaining / future work
 
-- GCP Cloud Run + Terraform deployment
 - Real OSRM/graph routing integration
 - Historical trend storage (no fabricated history)
 - LLM-backed What-If intent parsing
