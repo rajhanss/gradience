@@ -1,12 +1,22 @@
 import { useState } from "react";
 import { Eye, Zap, Route, ArrowRight, ShieldCheck, Cpu, Database, ChevronRight, X, BookOpen } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface LandingPageProps {
-  onNavigate: (route: "observe" | "simulate" | "optimize") => void;
+  onNavigate?: (route: "observe" | "simulate" | "optimize" | "mitigate") => void;
 }
 
 export default function LandingPage({ onNavigate }: LandingPageProps) {
+  const navigate = useNavigate();
   const [modal, setModal] = useState<{ title: string; subtitle?: string; content: string; isArticle?: boolean } | null>(null);
+
+  const handleGo = (target: "observe" | "simulate" | "mitigate" | "optimize") => {
+    const route = target === "optimize" ? "mitigate" : target;
+    if (onNavigate) {
+      onNavigate(route as any);
+    }
+    navigate(`/${route}`);
+  };
 
   const cards = [
     {
@@ -60,7 +70,7 @@ City planners used Gradience Development Intelligence to simulate the footprint 
 3. **Outcome:** Net thermal impact was reduced by 48% (from +1.4°C to +0.28°C), saving an estimated $340,000 annually in cooling energy across the district.`
     },
     {
-      id: "optimize" as const,
+      id: "mitigate" as const,
       num: "03",
       title: "OPTIMIZE",
       subtitle: "Mobility & Operations",
@@ -97,12 +107,12 @@ Gradience Mobility Optimization integrated live FortyGuard thermal heatmaps with
           </div>
 
           <div className="apple-nav-links">
-            <button type="button" onClick={() => onNavigate("observe")} className="apple-nav-btn">Observe</button>
-            <button type="button" onClick={() => onNavigate("simulate")} className="apple-nav-btn">Simulate</button>
-            <button type="button" onClick={() => onNavigate("optimize")} className="apple-nav-btn">Optimize</button>
+            <button type="button" onClick={() => handleGo("observe")} className="apple-nav-btn">Observe</button>
+            <button type="button" onClick={() => handleGo("simulate")} className="apple-nav-btn">Simulate</button>
+            <button type="button" onClick={() => handleGo("mitigate")} className="apple-nav-btn">Optimize</button>
             <button
               type="button"
-              onClick={() => onNavigate("observe")}
+              onClick={() => handleGo("observe")}
               className="apple-pill-btn"
             >
               Launch Platform ↗
@@ -126,7 +136,7 @@ Gradience Mobility Optimization integrated live FortyGuard thermal heatmaps with
         <div className="apple-hero-actions">
           <button
             type="button"
-            onClick={() => onNavigate("observe")}
+            onClick={() => handleGo("observe")}
             className="apple-btn-primary"
           >
             Start Exploring <ArrowRight size={16} />
@@ -192,7 +202,7 @@ Gradience Mobility Optimization integrated live FortyGuard thermal heatmaps with
                   </button>
                   <button
                     type="button"
-                    onClick={() => onNavigate(card.id)}
+                    onClick={() => handleGo(card.id)}
                     className="apple-card-action-btn"
                   >
                     {card.performText} <ArrowRight size={14} />

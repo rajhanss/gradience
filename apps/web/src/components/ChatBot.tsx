@@ -1,162 +1,155 @@
-import { useState } from "react";
-import { respondChatbot } from "../api/client";
-import { Send, Sparkles } from "lucide-react";
-
-interface ChatBotProps {
-  workflow: "observe" | "simulate" | "optimize" | "city" | "development" | "mobility";
-  latitude?: number;
-  longitude?: number;
-}
+import { useState, useRef, useEffect } from 'react';
+import { Send, Loader } from 'lucide-react';
 
 interface Message {
-  id: string;
-  sender: "user" | "assistant";
-  text: string;
-  timestamp: string;
-  isError?: boolean;
+  role: 'user' | 'assistant';
+  content: string;
 }
 
-const PROMPT_SUGGESTIONS: Record<string, string[]> = {
-  observe: [
-    "What is the hottest hotspot in Phoenix right now?",
-    "How does surface temperature correlate with canopy cover?",
-    "Explain the thermal anomaly calculation",
-  ],
-  simulate: [
-    "How much does 15% green cover reduce heat?",
-    "Compare cool roof vs tree canopy cooling efficiency",
-    "What mitigation is best for commercial asphalt?",
-  ],
-  optimize: [
-    "How much heat exposure is avoided along this route?",
-    "What are the safest departure windows for ambulances?",
-    "How do parks provide thermal cooling shadows?",
-  ],
+interface ChatBotProps {
+  workflowId: string;
+  city: string;
+}
+
+const getApiBase = () => {
+  const metaEnv = (import.meta as any).env;
+  if (metaEnv && metaEnv.VITE_API_BASE) {
+    return metaEnv.VITE_API_BASE;
+  }
+  const gProcess = (globalThis as any).process;
+  if (gProcess && gProcess.env && gProcess.env.REACT_APP_API_BASE) {
+    return gProcess.env.REACT_APP_API_BASE;
+  }
+  return 'https://gradience-api-production.up.railway.app';
 };
 
-export function ChatBot({ workflow }: ChatBotProps) {
-  const normalizedWf = ["city", "observe"].includes(workflow) ? "observe" : ["development", "simulate"].includes(workflow) ? "simulate" : "optimize";
-  const suggestions = PROMPT_SUGGESTIONS[normalizedWf] || PROMPT_SUGGESTIONS.observe;
+const API_BASE = getApiBase();
 
+export default function ChatBot({ workflowId, city }: ChatBotProps) {
   const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      sender: "assistant",
-      text: `Welcome to Gradience Intelligence. I am your climate assistant for the ${normalizedWf.toUpperCase()} workflow. Ask anything about thermal reference data, simulation parameters, or heat-aware routing.`,
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    },
+    { role: 'assistant', content: `Hi! I'm analyzing thermal data for ${city}. Ask me about heat patterns, mitigation strategies, or climate decisions.` }
   ]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const sendMessage = async (customText?: string) => {
-    const text = (customText ?? input).trim();
-    if (!text || loading) return;
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
-    const userMsg: Message = {
-      id: String(Date.now()),
-      sender: "user",
-      text,
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    };
+  const handleSend = async () => {
+    if (!input.trim()) return;
 
-    setMessages((prev) => [...prev, userMsg]);
-    if (!customText) setInput("");
-    setLoading(true);
+    const userMessage: Message = { role: 'user', content: input };
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+    setError(null);
 
     try {
-      const history = messages.map((m) => ({ role: m.sender, content: m.text }));
-      const res = await respondChatbot(normalizedWf, text, history);
-      const botMsg: Message = {
-        id: String(Date.now() + 1),
-        sender: "assistant",
-        text: res.response,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      console.log(`[Chat] Sending to ${API_BASE}/v1/chatbot/respond`);
+      
+      const response = await fetch(`${API_BASE}/v1/chatbot/respond`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          workflow: workflowId,
+          message: input,
+          history: messages.slice(-4) // Last 4 messages for context
+        })
+      });
+
+      console.log(`[Chat] Response status: ${response.status}`);
+
+      if (response.ok) {
+        const data = await response.json();
+        const assistantMessage: Message = { 
+          role: 'assistant', 
+          content: data.response || 'No response generated'
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Connection error';
+      console.error('[Chat] Error:', errorMsg);
+      setError(errorMsg);
+      
+      // Fallback response
+      const fallbackMessage: Message = {
+        role: 'assistant',
+        content: `I encountered an issue connecting to live API (${errorMsg}). For ${city}, thermal data shows elevated temperatures in urban core zones. Ask about localized cooling strategies or tree canopy density.`
       };
-      setMessages((prev) => [...prev, botMsg]);
-    } catch {
-      const errorMsg: Message = {
-        id: String(Date.now() + 1),
-        sender: "assistant",
-        isError: true,
-        text: "Unable to complete request. Please check your network connection or try again shortly.",
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      };
-      setMessages((prev) => [...prev, errorMsg]);
+      setMessages(prev => [...prev, fallbackMessage]);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="apple-chat-container">
-      <div className="apple-chat-header">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
-            <Sparkles size={14} className="text-orange-500" />
-            AI Climate Assistant
-          </span>
-        </div>
-        <span className="apple-chat-tag">{normalizedWf.toUpperCase()}</span>
+    <div className="flex flex-col h-full bg-white">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-4">
+        <h3 className="font-semibold text-lg">Thermal Assistant</h3>
+        <p className="text-sm opacity-90">{city} • {workflowId.charAt(0).toUpperCase() + workflowId.slice(1)}</p>
       </div>
 
-      <div className="apple-chat-body">
-        {messages.map((m) => (
-          <div
-            key={m.id}
-            className={`apple-chat-bubble apple-chat-bubble-${m.sender} ${
-              m.isError ? "border border-red-300 bg-red-50 text-red-800" : ""
-            }`}
-          >
-            <p className="apple-chat-text">{m.text}</p>
-            <span className="apple-chat-time">{m.timestamp}</span>
+      {/* Messages Container */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+        {messages.map((msg, idx) => (
+          <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div
+              className={`max-w-xs px-4 py-2 rounded-lg ${
+                msg.role === 'user'
+                  ? 'bg-orange-600 text-white rounded-br-none'
+                  : 'bg-white text-gray-900 border border-gray-200 rounded-bl-none shadow-sm'
+              }`}
+            >
+              <p className="text-sm leading-relaxed">{msg.content}</p>
+            </div>
           </div>
         ))}
-        {loading && (
-          <div className="apple-chat-bubble apple-chat-bubble-assistant apple-chat-loading">
-            <span className="text-xs text-slate-500">Thinking…</span>
+        {isLoading && (
+          <div className="flex items-center gap-2 text-gray-600 p-2">
+            <Loader size={16} className="animate-spin text-orange-600" />
+            <span className="text-sm">Thinking...</span>
           </div>
         )}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
+            ⚠️ {error}
+          </div>
+        )}
+        <div ref={messagesEndRef} />
       </div>
 
-      <div className="apple-chat-chips">
-        {suggestions.map((p) => (
+      {/* Input Area */}
+      <div className="border-t border-gray-200 bg-white p-4 space-y-3">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && !isLoading && handleSend()}
+            placeholder="Ask about thermal data..."
+            disabled={isLoading}
+            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-gray-100 text-gray-900"
+          />
           <button
-            key={p}
-            type="button"
-            onClick={() => void sendMessage(p)}
-            disabled={loading}
-            className="apple-chip-btn"
+            onClick={handleSend}
+            disabled={isLoading || !input.trim()}
+            className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
           >
-            {p}
+            <Send size={18} />
           </button>
-        ))}
+        </div>
       </div>
-
-      <form
-        className="apple-chat-input-bar"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void sendMessage();
-        }}
-      >
-        <input
-          type="text"
-          placeholder={`Ask about ${normalizedWf} data…`}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          disabled={loading}
-          className="apple-chat-input"
-        />
-        <button
-          type="submit"
-          disabled={loading || !input.trim()}
-          className="apple-chat-submit"
-        >
-          <Send size={15} />
-        </button>
-      </form>
     </div>
   );
 }
+export { ChatBot };
