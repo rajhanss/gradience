@@ -7,6 +7,12 @@
 [![Live API & Docs](https://img.shields.io/badge/Live%20API-gradience--api.railway.app-blue?style=for-the-badge&logo=fastapi)](https://gradience-api-production.up.railway.app/docs)
 [![CI Status](https://img.shields.io/badge/CI%20Workflow-100%25%20Passing-success?style=for-the-badge&logo=githubactions)](https://github.com/rajhanss/gradience/actions)
 
+## Live Deployments & Links
+
+- 🖥️ **Live Web Application:** [https://gradience-web-production.up.railway.app](https://gradience-web-production.up.railway.app)
+- 📖 **Interactive API Documentation (Swagger / OpenAPI):** [https://gradience-api-production.up.railway.app/docs](https://gradience-api-production.up.railway.app/docs)
+- 🛰️ **FortyGuard API Service:** [https://gradience-api-production.up.railway.app/v1/system/status](https://gradience-api-production.up.railway.app/v1/system/status)
+
 ## What This Is
 
 Gradience is a comprehensive platform demonstrating three workflows for urban thermal decision-making:
