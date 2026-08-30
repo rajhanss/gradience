@@ -53,24 +53,21 @@ export default function WorkflowLayout({
         </div>
       </header>
 
-      {/* Main Content - Dual Interface */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-[calc(100vh-140px)]">
-        {/* Left 1/3: Chatbot */}
-        <div className="w-full md:w-1/3 border-b md:border-b-0 md:border-r border-gray-200 flex flex-col bg-white overflow-hidden min-h-[400px]">
+      {/* Main Content - Stacked Layout: ChatBot (Top) -> Map (Middle) -> Metrics (Bottom) */}
+      <div className="flex-1 flex flex-col w-full max-w-7xl mx-auto overflow-y-auto">
+        {/* 1. ChatBot (Positioned on top of Map space, same size as Map space) */}
+        <div className="w-full h-[520px] border-b border-gray-200 bg-white flex flex-col overflow-hidden shadow-xs">
           <ChatBot workflowId={workflowId} city={city} />
         </div>
 
-        {/* Right 2/3: Map + Metrics */}
-        <div className="w-full md:w-2/3 flex flex-col overflow-hidden min-h-[600px]">
-          {/* Map (top 60%) */}
-          <div className="h-[55vh] md:h-[60%] overflow-hidden border-b border-gray-200 bg-gray-100 relative">
-            <InteractiveMap workflowId={workflowId} city={city} />
-          </div>
+        {/* 2. Map space (Full size preserved, same size as ChatBot space) */}
+        <div className="w-full h-[520px] border-b border-gray-200 bg-gray-100 relative overflow-hidden">
+          <InteractiveMap workflowId={workflowId} city={city} />
+        </div>
 
-          {/* Metrics (bottom 40%) */}
-          <div className="flex-1 md:h-[40%] overflow-y-auto bg-white">
-            <MetricsDashboard workflowId={workflowId} city={city} />
-          </div>
+        {/* 3. Metrics Dashboard */}
+        <div className="w-full bg-white">
+          <MetricsDashboard workflowId={workflowId} city={city} />
         </div>
       </div>
     </div>
