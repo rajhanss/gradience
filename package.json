@@ -1,0 +1,16 @@
+{
+  "name": "gradience",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "cd apps/web && npm install && npm run build",
+    "start": "cd apps/web && npx serve -s dist -l $PORT"
+  },
+  "dependencies": {
+    "serve": "^14.2.4"
+  }
+}
