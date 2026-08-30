@@ -1,22 +1,11 @@
 # Gradience
-**Thermal Intelligence Platform for Urban Heat Decision-Making**
+**Thermal Intelligence Platform for Urban Thermal Decision-Making**
 
-> Built for FortyGuard Global AI Hackathon 2026 (Aug 3–30)
+> Built for FortyGuard Hackathon 2026 (Aug 18–30)
 
 [![Live Web Application](https://img.shields.io/badge/Live%20App-gradience--web.railway.app-emerald?style=for-the-badge&logo=react)](https://gradience-web-production.up.railway.app)
 [![Live API & Docs](https://img.shields.io/badge/Live%20API-gradience--api.railway.app-blue?style=for-the-badge&logo=fastapi)](https://gradience-api-production.up.railway.app/docs)
 [![CI Status](https://img.shields.io/badge/CI%20Workflow-100%25%20Passing-success?style=for-the-badge&logo=githubactions)](https://github.com/rajhanss/gradience/actions)
-
----
-
-## 🌐 Live Deployments & Links
-
-- 🖥️ **Live Web Application:** [https://gradience-web-production.up.railway.app](https://gradience-web-production.up.railway.app)
-- 📖 **Interactive API Documentation (Swagger / OpenAPI):** [https://gradience-api-production.up.railway.app/docs](https://gradience-api-production.up.railway.app/docs)
-- 🛰️ **FortyGuard API Service:** [https://gradience-api-production.up.railway.app/v1/system/status](https://gradience-api-production.up.railway.app/v1/system/status)
-- 🐙 **GitHub Repository:** [https://github.com/rajhanss/gradience](https://github.com/rajhanss/gradience)
-
----
 
 ## What This Is
 
@@ -215,10 +204,3 @@ pytest apps/api/tests/test_ai_optimization.py -v
 - Baseline simulation coefficients, chatbot fallback, heatmap polling, hotspot clustering, mobility routing.
 - **Total:** 36 test cases, 100% pass rate.
 
----
-
-## License & Attribution
-
-MIT License. Attribution to FortyGuard for thermal data API.
-
-Built Aug 3–30, 2026 by Rajhans (24BECCS41@CUJ).
